@@ -14,11 +14,20 @@
       color: #031B4E;
     }
 
+    /* Animated background for header */
     header {
-      background: #031B4E;
+      background: linear-gradient(-45deg, #031B4E, #053071, #06449A, #031B4E);
+      background-size: 400% 400%;
+      animation: gradientBG 10s ease infinite;
       color: white;
       padding: 40px 20px;
       text-align: center;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
     header h1 {
@@ -173,4 +182,3 @@
   </script>
 </body>
 </html>
-
