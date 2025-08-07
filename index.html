@@ -126,6 +126,54 @@
       color: #031B4E;
       font-weight: bold;
     }
+    .responsive-table {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .responsive-table table {
+      width: 100%;
+      min-width: 600px; /* Avoid breaking content too early */
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 1.6rem;
+      }
+
+      header p, .intro-note {
+        font-size: 0.95rem;
+      }
+
+      section {
+        max-width: 1000px;
+        width: 95%;
+      }
+
+      th, td {
+        padding: 10px 8px;
+        font-size: 0.9rem;
+      }
+
+      .intro-note {
+        margin: 15px 10px;
+      }
+
+      #avatar-status {
+        bottom: 90px;
+        right: 10px;
+        padding: 8px;
+      }
+
+      #avatar-status img {
+        width: 36px;
+        height: 36px;
+      }
+
+      #avatar-status span {
+        font-size: 0.75rem;
+      }
+}
   </style>
 </head>
 
@@ -141,6 +189,7 @@
 
 <section>
   <h2>📁 Project Portfolio</h2>
+  <div class="responsive-table">
   <table>
     <tr>
       <th>No</th>
@@ -216,10 +265,12 @@
     </tr>
 
   </table>
+  </div>
 </section>
 
 
 <section>
+  <div class="responsive-table">
     <h2>🧠 Key Skills</h2>
     <table>
       <tr>
@@ -243,9 +294,11 @@
         <td>AWS (SageMaker, EC2), Azure, RedHat OpenShift</td>
       </tr>
     </table>
+  </div>
   </section>
 
   <section>
+  <div class="responsive-table">
     <h2>Community Profile</h2>
     <table>
       <tr>
@@ -269,6 +322,7 @@
         <td><a href="https://www.mathworks.com/matlabcentral/profile/authors/kevinchngjy" target="_blank">mathworks.com/matlabcentral/profile/authors/kevinchngjy</a></td>
       </tr>
       </table>
+  </div>
   </section>
 
     <!-- ✅ Assistant Avatar Box -->
@@ -322,4 +376,3 @@
   </script>
 </body>
 </html>
-
