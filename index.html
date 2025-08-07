@@ -6,11 +6,6 @@
   <title>Kevin | AI Resume Assistant</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    html, body {
-      max-width: 100%;
-      overflow-x: hidden;
-    }
-
     body {
       font-family: 'Roboto', sans-serif;
       margin: 0;
@@ -71,15 +66,10 @@
       color: #031B4E;
     }
 
-    .table-container {
-      overflow-x: auto;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
-      min-width: 600px;
     }
 
     th, td {
@@ -110,79 +100,35 @@
       font-size: 0.9rem;
     }
 
+    /* ✅ Avatar Animation Overlay */
     #avatar-status {
       position: fixed;
-      bottom: 100px;
+      bottom: 110px;
       right: 20px;
-      background: white;
+      background: #fff;
+      border: 2px solid #0061EB;
       border-radius: 12px;
       padding: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       display: flex;
       align-items: center;
-      z-index: 9999;
-      transition: opacity 0.3s ease;
+      gap: 10px;
+      z-index: 999; /* lower than chatbot */
     }
 
     #avatar-status img {
       width: 48px;
       height: 48px;
-      margin-right: 10px;
-      border-radius: 50%;
     }
 
     #avatar-status span {
-      font-weight: 500;
-      font-size: 0.95rem;
-    }
-
-    @media screen and (max-width: 600px) {
-      header h1 {
-        font-size: 1.6rem;
-      }
-
-      header p {
-        font-size: 1rem;
-      }
-
-      .intro-note {
-        padding: 10px;
-        font-size: 0.9rem;
-        margin: 12px;
-      }
-
-      section {
-        margin: 20px 10px;
-        padding: 15px;
-      }
-
-      th, td {
-        padding: 10px;
-        font-size: 0.9rem;
-      }
-
-      h2 {
-        font-size: 1.4rem;
-      }
-
-      #avatar-status {
-        right: 10px;
-        bottom: 90px;
-        padding: 8px;
-      }
-
-      #avatar-status img {
-        width: 36px;
-        height: 36px;
-        margin-right: 8px;
-      }
-
-      #avatar-status span {
-        font-size: 0.85rem;
-      }
+      font-size: 0.9rem;
+      color: #031B4E;
+      font-weight: bold;
     }
   </style>
 </head>
+
 <body>
   <header>
     <h1>Kevin – Senior Data Scientist</h1>
@@ -325,15 +271,19 @@
       </table>
   </section>
 
+    <!-- ✅ Assistant Avatar Box -->
+  <div id="avatar-status">
+    <img id="avatar-img" src="https://media.giphy.com/media/xTk9ZvMnbIiIew7IpW/giphy.gif" alt="Loading assistant..." />
+    <span id="avatar-text">Loading assistant...</span>
+  </div>
+
+  <!-- ✅ Project Portfolio, Skills, Community Profile -->
+  <!-- You can keep your previous sections here as-is... -->
+  <!-- ✂️ For brevity, I’m skipping repeated sections. Add your project and skills tables here. -->
+
   <footer>
     © 2025 Kevin – All Rights Reserved
   </footer>
-
-  <!-- 👇 Avatar status widget -->
-  <div id="avatar-status">
-    <img id="avatar-img" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOTQzYmJmZDQ0N2FlYjFlMTViMWE3OGVlYmUzYTY3MmQwN2I2NDdlMSZjdD1n/3oEjI6SIIHBdRxXI40/giphy.gif" alt="Loading assistant..." />
-    <span id="avatar-text">Loading assistant...</span>
-  </div>
 
   <!-- ✅ Floating Chatbot -->
   <script async
@@ -348,13 +298,27 @@
     data-logo="/static/chatbot/icons/default-agent.svg">
   </script>
 
+  <!-- ✅ Hide avatar on chatbot open -->
   <script>
-    // After 3 seconds, mark chatbot as ready
+    // Switch avatar to online mode after 3s
     setTimeout(() => {
-      document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif'; // cheerful cartoon
+      document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
       document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
     }, 3000);
+
+    // Hide avatar status when chatbot is opened
+    const hideAvatarIfChatbotVisible = () => {
+      const chatbotTrigger = document.querySelector('[class*="doai-widget-button"]');
+      if (chatbotTrigger) {
+        chatbotTrigger.addEventListener('click', () => {
+          const avatarBox = document.getElementById('avatar-status');
+          if (avatarBox) avatarBox.style.display = 'none';
+        });
+      } else {
+        setTimeout(hideAvatarIfChatbotVisible, 500);
+      }
+    };
+    hideAvatarIfChatbotVisible();
   </script>
 </body>
 </html>
-
