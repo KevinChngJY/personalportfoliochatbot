@@ -14,7 +14,6 @@
       color: #031B4E;
     }
 
-    /* Animated background for header */
     header {
       background: linear-gradient(-45deg, #031B4E, #053071, #06449A, #031B4E);
       background-size: 400% 400%;
@@ -100,6 +99,51 @@
       margin-top: 40px;
       font-size: 0.9rem;
     }
+
+    /* Avatar status widget */
+    #avatar-status {
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    #avatar-status img {
+      width: 48px;
+      height: 48px;
+      margin-right: 10px;
+      border-radius: 50%;
+    }
+
+    #avatar-status span {
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    @media screen and (max-width: 600px) {
+      #avatar-status {
+        right: 10px;
+        bottom: 90px;
+        padding: 8px;
+      }
+
+      #avatar-status img {
+        width: 36px;
+        height: 36px;
+        margin-right: 8px;
+      }
+
+      #avatar-status span {
+        font-size: 0.85rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -112,14 +156,11 @@
     💬 My AI chatbot is available on the <strong>bottom-right corner</strong> — feel free to ask about my resume or portfolio.
   </div>
 
-   HTML Section: Project Portfolio
-html
-Copy
-Edit
 <section>
   <h2>📁 Project Portfolio</h2>
   <table>
     <tr>
+      <th>No</th>
       <th>Project</th>
       <th>Description</th>
       <th>Skills</th>
@@ -127,58 +168,75 @@ Edit
     </tr>
 
     <tr>
+      <td>1</td>
       <td>SGH AI Antibiotic Prescription Prediction</td>
       <td>The system determines if antibiotics are needed (bacterial infections only) and recommends the specific antibiotic and dose based on patient clinical data. Led a 2-person team to successful delivery.</td>
       <td>PyTorch, MLFlow, Streamlit, Python</td>
-      <td><a href="#">View Project</a></td>
+      <td><a href="https://www.channelnewsasia.com/singapore/ai-antibiotic-resistance-prescription-sgh-hospital-pneumonia-4759296">View Project</a></td>
     </tr>
 
     <tr>
+      <td>2</td>
       <td>Career Navigator (Graph Recommender)</td>
       <td>Recommends skills/courses for career advancement and uses GenAI to generate resumes. Served as Data Scientist and Data Engineer Lead on a 10–15 member team.</td>
       <td>Neo4j, Apache Lucene, GenAI, Java, AngularJS, Apache NiFi, Content-based filtering</td>
-      <td><a href="#">View Project</a></td>
+      <td><a href="https://neo4j.com/blog/dxc-data-driven-employee-career-development/">View Project</a></td>
     </tr>
 
     <tr>
+      <td>3</td>
       <td>IT Incident Management Dashboard</td>
       <td>Built real-time dashboard for EG and ServiceNow tickets using Oracle Analytic Server to visualize insights and automate alerts.</td>
       <td>SQL, Oracle Analytic Server, Python, ETL, SSO Integration</td>
-      <td><a href="#">View Project</a></td>
+      <td></td>
     </tr>
 
     <tr>
+      <td>4</td>
       <td>Digital Twin Traffic Simulation</td>
       <td>Developed traffic simulation platform for layout optimization and flow planning, supporting different scenario modeling.</td>
       <td>SUMO, Python, SQL Server, Django, PDF Reporting</td>
-      <td><a href="#">View Project</a></td>
+      <td><a href="https://dxc.com/us/en/insights/perspectives/paper/how-advanced-technology-can-empower-smart-border-checkpoints">View Project</a></td>
     </tr>
 
     <tr>
+      <td>5</td>
       <td>Solution Architect Assistant (Hackathon Runner-Up)</td>
       <td>AI solution for tender response automation (RFP analysis, cost estimation, risk prediction, proposal generation). Runner-up in DXC Global Innovation Hackathon FY’25.</td>
       <td>Azure GenAI, Vector DB, ReactJS</td>
-      <td><a href="#">View Project</a></td>
+      <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/37813555/multiple-media-viewer/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E&treasuryMediaId=1737352405914&type=IMAGE">View Project</a></td>
     </tr>
 
     <tr>
+      <td>6</td>
       <td>OCBC BA Teller System Upgrade</td>
       <td>Upgraded OS on teller systems across 30+ branches (SG & MY), automated deployment via shell scripting, with full stakeholder testing and UAT/SIT coordination.</td>
       <td>Shell Scripting</td>
-      <td><a href="#">View Project</a></td>
+      <td></td>
     </tr>
 
     <tr>
+      <td>7</td>
       <td>Big Data Automation Data Pipeline</td>
       <td>Designed and built automated big data pipeline using Airflow and Podman, deployed on Red Hat OpenShift. Data sourced from central hub via Oracle GoldenGate replication.</td>
       <td>Python, Apache Airflow, Podman, Red Hat OpenShift, Oracle SQL</td>
-      <td><a href="#">View Project</a></td>
+      <td></td>
+    </tr>
+
+    <tr>
+      <td>8</td>
+      <td>Personal Projects</td>
+      <td>Example : Gait Recognition, Intelligent Reservation System, Image Based Traffic Density Real Time Prediction Using SG LTA
+        Traffic Camera, Stock Financial Bot</td>
+      <td>Python, OpenCV, Django, TensorFlow, PyTorch, Pandas, ONNX, Intel Openvino</td>
+      <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E">Project List</a></td>
     </tr>
 
   </table>
 </section>
 
-  <section>
+
+<section>
     <h2>🧠 Key Skills</h2>
     <table>
       <tr>
@@ -187,7 +245,7 @@ Edit
       </tr>
       <tr>
         <td>Machine Learning & AI</td>
-        <td>scikit-learn, XGBoost, LightGBM, NLP, GenAI, causal inference</td>
+        <td>scikit-learn, XGBoost, LightGBM, NLP, GenAI, Tensorflow</td>
       </tr>
       <tr>
         <td>MLOps & Deployment</td>
@@ -204,11 +262,43 @@ Edit
     </table>
   </section>
 
+  <section>
+    <h2>Community Profile</h2>
+    <table>
+      <tr>
+        <th>Platform</th>
+        <th>Profile</th>
+      </tr>
+      <tr>
+        <td>GitHub</td>
+        <td><a href="https://github.com/KevinChngJY" target="_blank">github.com/KevinChngJY</a></td>
+      </tr>
+      <tr>
+        <td>LinkedIn</td>
+        <td><a href="https://www.linkedin.com/in/kevinchngjy" target="_blank">linkedin.com/in/kevinchngjy</a></td>
+      </tr>
+      <tr>
+        <td>Medium</td>
+        <td><a href="https://medium.com/@kevinchngjy" target="_blank">medium.com/@kevinchngjy</a></td>  
+      </tr>
+      <tr>
+        <td>MATLAB COMMUNITY</td>
+        <td><a href="https://www.mathworks.com/matlabcentral/profile/authors/kevinchngjy" target="_blank">mathworks.com/matlabcentral/profile/authors/kevinchngjy</a></td>
+      </tr>
+      </table>
+  </section>
+
   <footer>
     © 2025 Kevin – All Rights Reserved
   </footer>
 
-  <!-- ✅ Floating Chatbot must stay at the end -->
+  <!-- 👇 Avatar status widget -->
+  <div id="avatar-status">
+    <img id="avatar-img" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOTQzYmJmZDQ0N2FlYjFlMTViMWE3OGVlYmUzYTY3MmQwN2I2NDdlMSZjdD1n/3oEjI6SIIHBdRxXI40/giphy.gif" alt="Loading assistant..." />
+    <span id="avatar-text">Loading assistant...</span>
+  </div>
+
+  <!-- ✅ Floating Chatbot -->
   <script async
     src="https://zfgfrovrvipyilvbcmiyolte.agents.do-ai.run/static/chatbot/widget.js"
     data-agent-id="fd28e289-72e1-11f0-b074-4e013e2ddde4"
@@ -220,7 +310,14 @@ Edit
     data-starting-message="Hello! How can I help you today?"
     data-logo="/static/chatbot/icons/default-agent.svg">
   </script>
+
+  <script>
+    // After 3 seconds, mark chatbot as ready
+    setTimeout(() => {
+      document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif'; // cheerful cartoon
+      document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
+    }, 3000);
+  </script>
 </body>
 </html>
-
 
