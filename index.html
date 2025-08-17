@@ -13,7 +13,6 @@
       background: #f7f9fc;
       color: #031B4E;
     }
-
     header {
       background: linear-gradient(-45deg, #031B4E, #053071, #06449A, #031B4E);
       background-size: 400% 400%;
@@ -22,23 +21,13 @@
       padding: 40px 20px;
       text-align: center;
     }
-
     @keyframes gradientBG {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
-
-    header h1 {
-      font-size: 2.2rem;
-      margin-bottom: 8px;
-    }
-
-    header p {
-      font-size: 1.1rem;
-      opacity: 0.9;
-    }
-
+    header h1 { font-size: 2.2rem; margin-bottom: 8px; }
+    header p { font-size: 1.1rem; opacity: 0.9; }
     .intro-note {
       text-align: center;
       background: #eaf4ff;
@@ -50,7 +39,6 @@
       border-radius: 5px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     }
-
     section {
       max-width: 1000px;
       margin: 30px auto;
@@ -59,39 +47,12 @@
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     }
-
-    h2 {
-      text-align: center;
-      margin-top: 40px;
-      color: #031B4E;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-
-    th, td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid #ccc;
-    }
-
-    th {
-      background-color: #031B4E;
-      color: white;
-    }
-
-    tr:hover {
-      background-color: #f0f4ff;
-    }
-
-    a {
-      color: #0061EB;
-      text-decoration: none;
-    }
-
+    h2 { text-align: center; margin-top: 40px; color: #031B4E; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #ccc; }
+    th { background-color: #031B4E; color: white; }
+    tr:hover { background-color: #f0f4ff; }
+    a { color: #0061EB; text-decoration: none; }
     footer {
       background: #E5E8ED;
       text-align: center;
@@ -99,8 +60,6 @@
       margin-top: 40px;
       font-size: 0.9rem;
     }
-
-    /* ✅ Avatar Animation Overlay */
     #avatar-status {
       position: fixed;
       bottom: 110px;
@@ -113,266 +72,285 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      z-index: 999; /* lower than chatbot */
+      z-index: 999;
     }
-
-    #avatar-status img {
-      width: 48px;
-      height: 48px;
-    }
-
-    #avatar-status span {
-      font-size: 0.9rem;
-      color: #031B4E;
-      font-weight: bold;
-    }
-    .responsive-table {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .responsive-table table {
-      width: 100%;
-      min-width: 600px; /* Avoid breaking content too early */
-    }
-
+    #avatar-status img { width: 48px; height: 48px; }
+    #avatar-status span { font-size: 0.9rem; color: #031B4E; font-weight: bold; }
+    .responsive-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .responsive-table table { width: 100%; min-width: 600px; }
     @media (max-width: 768px) {
-      header h1 {
-        font-size: 1.6rem;
-      }
-
-      header p, .intro-note {
-        font-size: 0.95rem;
-      }
-
-      section {
-        max-width: 1000px;
-        width: 95%;
-      }
-
-      th, td {
-        padding: 10px 8px;
-        font-size: 0.9rem;
-      }
-
-      .intro-note {
-        margin: 15px 10px;
-      }
-
-      #avatar-status {
-        bottom: 90px;
-        right: 10px;
-        padding: 8px;
-      }
-
-      #avatar-status img {
-        width: 36px;
-        height: 36px;
-      }
-
-      #avatar-status span {
-        font-size: 0.75rem;
-      }
-}
+      header h1 { font-size: 1.6rem; }
+      header p, .intro-note { font-size: 0.95rem; }
+      section { width: 95%; }
+      th, td { padding: 10px 8px; font-size: 0.9rem; }
+      .intro-note { margin: 15px 10px; }
+      #avatar-status { bottom: 90px; right: 10px; padding: 8px; }
+      #avatar-status img { width: 36px; height: 36px; }
+      #avatar-status span { font-size: 0.75rem; }
+    }
+    /* Chatbot styles */
+    #kc-chat-launcher {
+      position: fixed; bottom: 50px; right: 50px;
+      background: #0061EB; border-radius: 50%; width: 60px; height: 60px;
+      color: white; border: none; cursor: pointer; font-size: 28px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1000;
+    }
+    #kc-chat-window {
+      position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px;
+      background: #fff; border: 1px solid #ccc; border-radius: 10px;
+      display: none; flex-direction: column; overflow: hidden; z-index: 1000;
+    }
+    #kc-header {
+      background: #031B4E; color: white; padding: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #kc-messages {
+      flex: 1; padding: 10px; overflow-y: auto; font-size: 0.9rem;
+    }
+    .kc-msg { margin-bottom: 8px; }
+    .kc-msg.user { text-align: right; }
+    .kc-bubble {
+      display: inline-block; padding: 8px 12px; border-radius: 10px;
+      max-width: 80%;
+    }
+    .kc-msg.user .kc-bubble { background: #0061EB; color: white; }
+    .kc-msg.bot .kc-bubble { background: #E5E8ED; color: black; }
+    #kc-input-box { display: flex; border-top: 1px solid #ccc; }
+    #kc-input { flex: 1; border: none; padding: 10px; font-size: 0.9rem; }
+    #kc-send { background: #0061EB; border: none; color: white; padding: 0 15px; cursor: pointer; }
+    #kc-typing { font-size: 0.8rem; color: #666; display: none; }
+    .kc-badge { display: inline-block; background: #d9e9ff; color: #031B4E;
+      padding: 3px 6px; border-radius: 6px; font-size: 0.75rem; margin: 2px; }
   </style>
 </head>
-
 <body>
   <header>
     <h1>Kevin – Senior Data Scientist</h1>
     <p>Explore my experience, projects, and skills</p>
   </header>
-
   <div class="intro-note">
     💬 My AI chatbot is available on the <strong>bottom-right corner</strong> — feel free to ask about my resume or portfolio.
   </div>
 
-<section>
-  <h2>📁 Project Portfolio</h2>
-  <div class="responsive-table">
-  <table>
-    <tr>
-      <th>No</th>
-      <th>Project</th>
-      <th>Description</th>
-      <th>Skills</th>
-      <th>Link</th>
-    </tr>
-
-    <tr>
-      <td>1</td>
-      <td>SGH AI Antibiotic Prescription Prediction</td>
-      <td>The system determines if antibiotics are needed (bacterial infections only) and recommends the specific antibiotic and dose based on patient clinical data. Led a 2-person team to successful delivery.</td>
-      <td>PyTorch, MLFlow, Streamlit, Python</td>
-      <td><a href="https://www.channelnewsasia.com/singapore/ai-antibiotic-resistance-prescription-sgh-hospital-pneumonia-4759296">View Project</a></td>
-    </tr>
-
-    <tr>
-      <td>2</td>
-      <td>Career Navigator (Graph Recommender)</td>
-      <td>Recommends skills/courses for career advancement and uses GenAI to generate resumes. Served as Data Scientist and Data Engineer Lead on a 10–15 member team.</td>
-      <td>Neo4j, Apache Lucene, GenAI, Java, AngularJS, Apache NiFi, Content-based filtering</td>
-      <td><a href="https://neo4j.com/blog/dxc-data-driven-employee-career-development/">View Project</a></td>
-    </tr>
-
-    <tr>
-      <td>3</td>
-      <td>IT Incident Management Dashboard</td>
-      <td>Built real-time dashboard for EG and ServiceNow tickets using Oracle Analytic Server to visualize insights and automate alerts.</td>
-      <td>SQL, Oracle Analytic Server, Python, ETL, SSO Integration</td>
-      <td></td>
-    </tr>
-
-    <tr>
-      <td>4</td>
-      <td>Digital Twin Traffic Simulation</td>
-      <td>Developed traffic simulation platform for layout optimization and flow planning, supporting different scenario modeling.</td>
-      <td>SUMO, Python, SQL Server, Django, PDF Reporting</td>
-      <td><a href="https://dxc.com/us/en/insights/perspectives/paper/how-advanced-technology-can-empower-smart-border-checkpoints">View Project</a></td>
-    </tr>
-
-    <tr>
-      <td>5</td>
-      <td>Solution Architect Assistant (Hackathon Runner-Up)</td>
-      <td>AI solution for tender response automation (RFP analysis, cost estimation, risk prediction, proposal generation). Runner-up in DXC Global Innovation Hackathon FY’25.</td>
-      <td>Azure GenAI, Vector DB, ReactJS</td>
-      <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/37813555/multiple-media-viewer/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E&treasuryMediaId=1737352405914&type=IMAGE">View Project</a></td>
-    </tr>
-
-    <tr>
-      <td>6</td>
-      <td>OCBC BA Teller System Upgrade</td>
-      <td>Upgraded OS on teller systems across 30+ branches (SG & MY), automated deployment via shell scripting, with full stakeholder testing and UAT/SIT coordination.</td>
-      <td>Shell Scripting</td>
-      <td></td>
-    </tr>
-
-    <tr>
-      <td>7</td>
-      <td>Big Data Automation Data Pipeline</td>
-      <td>Designed and built automated big data pipeline using Airflow and Podman, deployed on Red Hat OpenShift. Data sourced from central hub via Oracle GoldenGate replication.</td>
-      <td>Python, Apache Airflow, Podman, Red Hat OpenShift, Oracle SQL</td>
-      <td></td>
-    </tr>
-
-    <tr>
-      <td>8</td>
-      <td>Personal Projects</td>
-      <td>Example : Gait Recognition, Intelligent Reservation System, Image Based Traffic Density Real Time Prediction Using SG LTA
-        Traffic Camera, Stock Financial Bot</td>
-      <td>Python, OpenCV, Django, TensorFlow, PyTorch, Pandas, ONNX, Intel Openvino</td>
-      <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E">Project List</a></td>
-    </tr>
-
-  </table>
-  </div>
-</section>
-
-
-<section>
-  <div class="responsive-table">
-    <h2>🧠 Key Skills</h2>
-    <table>
-      <tr>
-        <th>Category</th>
-        <th>Skills</th>
-      </tr>
-      <tr>
-        <td>Machine Learning & AI</td>
-        <td>scikit-learn, XGBoost, LightGBM, NLP, GenAI, Tensorflow</td>
-      </tr>
-      <tr>
-        <td>MLOps & Deployment</td>
-        <td>MLflow, Docker, Airflow, CI/CD, monitoring, model governance</td>
-      </tr>
-      <tr>
-        <td>Big Data & Engineering</td>
-        <td>Spark, Kafka, NiFi, SQL, Pandas, PySpark</td>
-      </tr>
-      <tr>
-        <td>Cloud Platforms</td>
-        <td>AWS (SageMaker, EC2), Azure, RedHat OpenShift</td>
-      </tr>
-    </table>
-  </div>
+  <section>
+    <h2>📁 Project Portfolio</h2>
+    <div class="responsive-table">
+      <table>
+        <tr>
+          <th>No</th><th>Project</th><th>Description</th><th>Skills</th><th>Link</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>SGH AI Antibiotic Prescription Prediction</td>
+          <td>The system determines if antibiotics are needed (bacterial infections only) and recommends the specific antibiotic and dose based on patient clinical data. Led a 2-person team to successful delivery.</td>
+          <td>PyTorch, MLFlow, Streamlit, Python</td>
+          <td><a href="https://www.channelnewsasia.com/singapore/ai-antibiotic-resistance-prescription-sgh-hospital-pneumonia-4759296">View Project</a></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Career Navigator (Graph Recommender)</td>
+          <td>Recommends skills/courses for career advancement and uses GenAI to generate resumes. Served as Data Scientist and Data Engineer Lead on a 10–15 member team.</td>
+          <td>Neo4j, Apache Lucene, GenAI, Java, AngularJS, Apache NiFi, Content-based filtering</td>
+          <td><a href="https://neo4j.com/blog/dxc-data-driven-employee-career-development/">View Project</a></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>IT Incident Management Dashboard</td>
+          <td>Built real-time dashboard for EG and ServiceNow tickets using Oracle Analytic Server to visualize insights and automate alerts.</td>
+          <td>SQL, Oracle Analytic Server, Python, ETL, SSO Integration</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Digital Twin Traffic Simulation</td>
+          <td>Developed traffic simulation platform for layout optimization and flow planning, supporting different scenario modeling.</td>
+          <td>SUMO, Python, SQL Server, Django, PDF Reporting</td>
+          <td><a href="https://dxc.com/us/en/insights/perspectives/paper/how-advanced-technology-can-empower-smart-border-checkpoints">View Project</a></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Solution Architect Assistant (Hackathon Runner-Up)</td>
+          <td>AI solution for tender response automation (RFP analysis, cost estimation, risk prediction, proposal generation). Runner-up in DXC Global Innovation Hackathon FY’25.</td>
+          <td>Azure GenAI, Vector DB, ReactJS</td>
+          <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/37813555/multiple-media-viewer/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E&treasuryMediaId=1737352405914&type=IMAGE">View Project</a></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>OCBC BA Teller System Upgrade</td>
+          <td>Upgraded OS on teller systems across 30+ branches (SG & MY), automated deployment via shell scripting, with full stakeholder testing and UAT/SIT coordination.</td>
+          <td>Shell Scripting</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>Big Data Automation Data Pipeline</td>
+          <td>Designed and built automated big data pipeline using Airflow and Podman, deployed on Red Hat OpenShift. Data sourced from central hub via Oracle GoldenGate replication.</td>
+          <td>Python, Apache Airflow, Podman, Red Hat OpenShift, Oracle SQL</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Personal Projects</td>
+          <td>Example : Gait Recognition, Intelligent Reservation System, Image Based Traffic Density Real Time Prediction Using SG LTA
+            Traffic Camera, Stock Financial Bot</td>
+          <td>Python, OpenCV, Django, TensorFlow, PyTorch, Pandas, ONNX, Intel Openvino</td>
+          <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E">Project List</a></td>
+        </tr>
+      </table>
+    </div>
   </section>
 
   <section>
-  <div class="responsive-table">
-    <h2>Community Profile</h2>
-    <table>
-      <tr>
-        <th>Platform</th>
-        <th>Profile</th>
-      </tr>
-      <tr>
-        <td>GitHub</td>
-        <td><a href="https://github.com/KevinChngJY" target="_blank">github.com/KevinChngJY</a></td>
-      </tr>
-      <tr>
-        <td>LinkedIn</td>
-        <td><a href="https://www.linkedin.com/in/kevinchngjy" target="_blank">linkedin.com/in/kevinchngjy</a></td>
-      </tr>
-      <tr>
-        <td>Medium</td>
-        <td><a href="https://medium.com/@kevinchngjy" target="_blank">medium.com/@kevinchngjy</a></td>  
-      </tr>
-      <tr>
-        <td>MATLAB COMMUNITY</td>
-        <td><a href="https://www.mathworks.com/matlabcentral/profile/authors/kevinchngjy" target="_blank">mathworks.com/matlabcentral/profile/authors/kevinchngjy</a></td>
-      </tr>
+    <div class="responsive-table">
+      <h2>🧠 Key Skills</h2>
+      <table>
+        <tr><th>Category</th><th>Skills</th></tr>
+        <tr><td>Machine Learning & AI</td><td>scikit-learn, XGBoost, LightGBM, NLP, GenAI, Tensorflow</td></tr>
+        <tr><td>MLOps & Deployment</td><td>MLflow, Docker, Airflow, CI/CD, monitoring, model governance</td></tr>
+        <tr><td>Big Data & Engineering</td><td>Spark, Kafka, NiFi, SQL, Pandas, PySpark</td></tr>
+        <tr><td>Cloud Platforms</td><td>AWS (SageMaker, EC2), Azure, RedHat OpenShift</td></tr>
       </table>
-  </div>
+    </div>
   </section>
 
-    <!-- ✅ Assistant Avatar Box -->
+  <section>
+    <div class="responsive-table">
+      <h2>Community Profile</h2>
+      <table>
+        <tr><th>Platform</th><th>Profile</th></tr>
+        <tr><td>GitHub</td><td><a href="https://github.com/KevinChngJY" target="_blank">github.com/KevinChngJY</a></td></tr>
+        <tr><td>LinkedIn</td><td><a href="https://www.linkedin.com/in/kevinchngjy" target="_blank">linkedin.com/in/kevinchngjy</a></td></tr>
+        <tr><td>Medium</td><td><a href="https://medium.com/@kevinchngjy" target="_blank">medium.com/@kevinchngjy</a></td></tr>
+        <tr><td>MATLAB COMMUNITY</td><td><a href="https://www.mathworks.com/matlabcentral/profile/authors/kevinchngjy" target="_blank">mathworks.com/matlabcentral/profile/authors/kevinchngjy</a></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- Avatar -->
   <div id="avatar-status">
     <img id="avatar-img" src="https://media.giphy.com/media/xTk9ZvMnbIiIew7IpW/giphy.gif" alt="Loading assistant..." />
     <span id="avatar-text">Loading assistant...</span>
   </div>
 
-  <!-- ✅ Project Portfolio, Skills, Community Profile -->
-  <!-- You can keep your previous sections here as-is... -->
-  <!-- ✂️ For brevity, I’m skipping repeated sections. Add your project and skills tables here. -->
+  <!-- Chat Launcher -->
+  <button id="kc-chat-launcher">💬</button>
 
-  <footer>
-    © 2025 Kevin – All Rights Reserved
-  </footer>
+  <!-- Chat Window -->
+  <div id="kc-chat-window">
+    <div id="kc-header">
+      <span>Virtual Kevin</span>
+      <button id="kc-close" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;">✖</button>
+    </div>
+    <div id="kc-messages"></div>
+    <div id="kc-typing">Kevin is typing...</div>
+    <div id="kc-badges"></div>
+    <div id="kc-input-box">
+      <input id="kc-input" type="text" placeholder="Type your message..." />
+      <button id="kc-send">Send</button>
+    </div>
+  </div>
 
-  <!-- ✅ Floating Chatbot -->
-  <script async
-    src="https://zfgfrovrvipyilvbcmiyolte.agents.do-ai.run/static/chatbot/widget.js"
-    data-agent-id="fd28e289-72e1-11f0-b074-4e013e2ddde4"
-    data-chatbot-id="Iudsx3X2EZGml0bXsm8qqhAVxsnU_gBk"
-    data-name="Kevin Chng (Virtual)"
-    data-primary-color="#031B4E"
-    data-secondary-color="#E5E8ED"
-    data-button-background-color="#0061EB"
-    data-starting-message="Hello! I am Virtual Kevin Chng, would you like to ask me about my resume or portfolio?"
-    data-logo="/static/chatbot/icons/default-agent.svg">
-  </script>
-
-  <!-- ✅ Hide avatar on chatbot open -->
   <script>
-    // Switch avatar to online mode after 3s
+    const API_BASE = "https://stingray-app-9hiam.ondigitalocean.app"; // Your FastAPI endpoint
+    const SESSION_KEY = "kc_chat_anon_id";
+    const getSessionId = () => {
+      let id = localStorage.getItem(SESSION_KEY);
+      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)); localStorage.setItem(SESSION_KEY, id); }
+      return id;
+    };
+
     setTimeout(() => {
       document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
       document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
     }, 3000);
 
-    // Hide avatar status when chatbot is opened
-    const hideAvatarIfChatbotVisible = () => {
-      const chatbotTrigger = document.querySelector('[class*="doai-widget-button"]');
-      if (chatbotTrigger) {
-        chatbotTrigger.addEventListener('click', () => {
-          const avatarBox = document.getElementById('avatar-status');
-          if (avatarBox) avatarBox.style.display = 'none';
-        });
-      } else {
-        setTimeout(hideAvatarIfChatbotVisible, 500);
+    const launcher = document.getElementById('kc-chat-launcher');
+    const win = document.getElementById('kc-chat-window');
+    const closeBtn = document.getElementById('kc-close');
+    const msgs = document.getElementById('kc-messages');
+    const typing = document.getElementById('kc-typing');
+    const input = document.getElementById('kc-input');
+    const sendBtn = document.getElementById('kc-send');
+    const badges = document.getElementById('kc-badges');
+    const avatarBox = document.getElementById('avatar-status');
+
+    function setAvatarVisible(on) {
+      if (!avatarBox) return;
+      avatarBox.style.display = on ? 'flex' : 'none';
+    }
+
+    launcher.addEventListener('click', () => {
+      win.style.display = 'flex';
+      launcher.style.display = 'none';
+      setAvatarVisible(false);
+      if (msgs.children.length === 0) {
+        addBot("Hello! I’m Virtual Kevin. Ask me about my portfolio, background, or projects.");
       }
-    };
-    hideAvatarIfChatbotVisible();
+    });
+
+    function closeChat() {
+      win.style.display = 'none';
+      launcher.style.display = 'inline-block';
+      setAvatarVisible(true);
+    }
+
+    closeBtn.addEventListener('click', closeChat);
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
+
+    function addMsg(role, text) {
+      const row = document.createElement('div');
+      row.className = `kc-msg ${role}`;
+      const bubble = document.createElement('div');
+      bubble.className = 'kc-bubble';
+      bubble.textContent = text;
+      row.appendChild(bubble);
+      msgs.appendChild(row);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+    const addUser = (t) => addMsg('user', t);
+    const addBot  = (t) => addMsg('bot', t);
+    function setTyping(on) { typing.style.display = on ? 'block' : 'none'; }
+    function showCompanies(companies) {
+      badges.innerHTML = '';
+      if (!companies || !companies.length) return;
+      companies.slice(0, 3).forEach(c => {
+        const tag = document.createElement('span');
+        tag.className = 'kc-badge';
+        tag.textContent = c.name;
+        badges.appendChild(tag);
+      });
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addUser(text);
+      setTyping(true);
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: getSessionId(), message: text })
+        });
+        const data = await res.json();
+        setTyping(false);
+        sendBtn.disabled = false;
+        showCompanies(data.companies);
+        console.log("Response:", data);
+        if (data.answer) addBot(data.answer);
+        else if (data.error) addBot("Error: " + data.error);
+        else addBot("No response from server.");
+      } catch (err) {
+        setTyping(false);
+        sendBtn.disabled = false;
+        addBot("Network error. Please try again.");
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
   </script>
 </body>
 </html>
