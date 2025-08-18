@@ -247,6 +247,7 @@
     <div id="kc-messages"></div>
     <div id="kc-typing">Kevin is typing...</div>
     <div id="kc-badges"></div>
+    <div id="kc-role" class="kc-badge" style="display:none;margin-left:8px;"></div>
     <div id="kc-session" style="font-size:10px;color:#666;text-align:right;padding:4px 8px;">sid: …</div>
     <div id="kc-input-box">
       <input id="kc-input" type="text" placeholder="Type your message..." />
@@ -256,7 +257,7 @@
 
   <script>
   // --- Config: prod/local toggle ---
-  const PROD = true; // set to true on your live site if you want
+  const PROD = True; // set to true on your live site if you want
   const API_BASE = PROD
     ? "https://stingray-app-9hiam.ondigitalocean.app"
     : "http://localhost:8080";
@@ -292,6 +293,7 @@
   const badges = document.getElementById('kc-badges');
   const avatarBox = document.getElementById('avatar-status');
   const sessionBadge = document.getElementById('kc-session');
+  const roleBadge = document.getElementById('kc-role');
 
   // Show current session id for debugging (optional)
   function updateSessionBadge() {
@@ -334,6 +336,7 @@
     // Clear chat UI
     msgs.innerHTML = "";
     badges.innerHTML = "";
+    clearRole();
     addBot("Started a new conversation. How can I help?");
   });
 
@@ -352,6 +355,20 @@
   const addBot  = (t) => addMsg('bot', t);
   function setTyping(on) { typing.style.display = on ? 'block' : 'none'; }
 
+  function showRole(role) {
+    if (!roleBadge) return;
+    if (!role) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; return; }
+    const label = role === 'recruiter_interviewer' ? 'Recruiter/Interviewer' : 'General';
+    roleBadge.textContent = `Role: ${label}`;
+    roleBadge.style.display = 'inline-block';
+  }
+
+  function clearRole() {
+    if (!roleBadge) return;
+    roleBadge.style.display = 'none';
+    roleBadge.textContent = '';
+  }
+
   function showCompanies(companies) {
     badges.innerHTML = '';
     if (!companies || !companies.length) return;
@@ -365,36 +382,42 @@
 
   // Send message
   async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-    addUser(text);
-    setTyping(true);
-    sendBtn.disabled = true;
-    try {
-      const payload = {
-        session_id: getSessionId(),
-        message: text,
-        utm_source: "web" // optional telemetry
-      };
-      const res = await fetch(`${API_BASE}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      setTyping(false);
-      sendBtn.disabled = false;
-      showCompanies(data.companies);
-      if (data.answer) addBot(data.answer);
-      else if (data.error) addBot("Error: " + data.error);
-      else addBot("No response from server.");
-    } catch (err) {
-      setTyping(false);
-      sendBtn.disabled = false;
-      addBot("Network error. Please try again.");
-    }
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addUser(text);
+  setTyping(true);
+  sendBtn.disabled = true;
+
+  try {
+    const payload = {                    // ← define it here
+      session_id: getSessionId(),
+      message: text,
+      utm_source: "web"
+    };
+
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    setTyping(false);
+    sendBtn.disabled = false;
+
+    showRole(data.role);
+    showCompanies(data.companies);
+
+    if (data.answer) addBot(data.answer);
+    else if (data.error) addBot("Error: " + (data.error || 'unknown'));
+    else addBot("No response from server.");
+  } catch (err) {
+    setTyping(false);
+    sendBtn.disabled = false;
+    addBot("Network error. Please try again.");
   }
+}
 
   sendBtn.addEventListener('click', sendMessage);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
