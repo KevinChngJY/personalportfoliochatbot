@@ -239,11 +239,15 @@
   <div id="kc-chat-window">
     <div id="kc-header">
       <span>Virtual Kevin</span>
-      <button id="kc-close" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;">✖</button>
+      <div>
+        <button id="kc-new" style="background:none;border:1px solid #fff;color:white;padding:2px 8px;border-radius:6px;cursor:pointer;margin-right:8px;">New</button>
+        <button id="kc-close" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;">✖</button>
+      </div>
     </div>
     <div id="kc-messages"></div>
     <div id="kc-typing">Kevin is typing...</div>
     <div id="kc-badges"></div>
+    <div id="kc-session" style="font-size:10px;color:#666;text-align:right;padding:4px 8px;">sid: …</div>
     <div id="kc-input-box">
       <input id="kc-input" type="text" placeholder="Type your message..." />
       <button id="kc-send">Send</button>
@@ -251,106 +255,149 @@
   </div>
 
   <script>
-    const API_BASE = "https://stingray-app-9hiam.ondigitalocean.app"; // Your FastAPI endpoint
-    const SESSION_KEY = "kc_chat_anon_id";
-    const getSessionId = () => {
-      let id = localStorage.getItem(SESSION_KEY);
-      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)); localStorage.setItem(SESSION_KEY, id); }
-      return id;
-    };
+  // --- Config: prod/local toggle ---
+  const PROD = true; // set to true on your live site if you want
+  const API_BASE = PROD
+    ? "https://stingray-app-9hiam.ondigitalocean.app"
+    : "http://localhost:8080";
 
-    setTimeout(() => {
-      document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
-      document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
-    }, 3000);
-
-    const launcher = document.getElementById('kc-chat-launcher');
-    const win = document.getElementById('kc-chat-window');
-    const closeBtn = document.getElementById('kc-close');
-    const msgs = document.getElementById('kc-messages');
-    const typing = document.getElementById('kc-typing');
-    const input = document.getElementById('kc-input');
-    const sendBtn = document.getElementById('kc-send');
-    const badges = document.getElementById('kc-badges');
-    const avatarBox = document.getElementById('avatar-status');
-
-    function setAvatarVisible(on) {
-      if (!avatarBox) return;
-      avatarBox.style.display = on ? 'flex' : 'none';
+  // --- Session management ---
+  const SESSION_KEY = "kc_chat_anon_id";
+  function getSessionId() {
+    let id = localStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
+      localStorage.setItem(SESSION_KEY, id);
     }
+    return id;
+  }
+  function resetSessionId() {
+    const old = localStorage.getItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
+    const fresh = getSessionId();
+    // If you created a /reset endpoint, you can notify backend to clear memory:
+    // fetch(`${API_BASE}/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: old }) }).catch(()=>{});
+    return { old, fresh };
+  }
 
-    launcher.addEventListener('click', () => {
-      win.style.display = 'flex';
-      launcher.style.display = 'none';
-      setAvatarVisible(false);
-      if (msgs.children.length === 0) {
-        addBot("Hello! I’m Virtual Kevin. Ask me about my portfolio, background, or projects.");
-      }
+  // --- UI refs ---
+  const launcher = document.getElementById('kc-chat-launcher');
+  const win = document.getElementById('kc-chat-window');
+  const closeBtn = document.getElementById('kc-close');
+  const newBtn = document.getElementById('kc-new');
+  const msgs = document.getElementById('kc-messages');
+  const typing = document.getElementById('kc-typing');
+  const input = document.getElementById('kc-input');
+  const sendBtn = document.getElementById('kc-send');
+  const badges = document.getElementById('kc-badges');
+  const avatarBox = document.getElementById('avatar-status');
+  const sessionBadge = document.getElementById('kc-session');
+
+  // Show current session id for debugging (optional)
+  function updateSessionBadge() {
+    if (sessionBadge) sessionBadge.textContent = `sid: ${getSessionId()}`;
+  }
+  updateSessionBadge();
+
+  // Avatar status
+  setTimeout(() => {
+    document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
+    document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
+  }, 3000);
+
+  function setAvatarVisible(on) {
+    if (!avatarBox) return;
+    avatarBox.style.display = on ? 'flex' : 'none';
+  }
+
+  launcher.addEventListener('click', () => {
+    win.style.display = 'flex';
+    launcher.style.display = 'none';
+    setAvatarVisible(false);
+    if (msgs.children.length === 0) {
+      addBot("Hello! I’m Virtual Kevin. Ask me about my portfolio, background, or projects.");
+    }
+  });
+
+  function closeChat() {
+    win.style.display = 'none';
+    launcher.style.display = 'inline-block';
+    setAvatarVisible(true);
+  }
+  closeBtn.addEventListener('click', closeChat);
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
+
+  // New chat: reset session id and clear UI
+  newBtn.addEventListener('click', async () => {
+    const { old, fresh } = resetSessionId();
+    updateSessionBadge();
+    // Clear chat UI
+    msgs.innerHTML = "";
+    badges.innerHTML = "";
+    addBot("Started a new conversation. How can I help?");
+  });
+
+  // Message helpers
+  function addMsg(role, text) {
+    const row = document.createElement('div');
+    row.className = `kc-msg ${role}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'kc-bubble';
+    bubble.textContent = text;
+    row.appendChild(bubble);
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  const addUser = (t) => addMsg('user', t);
+  const addBot  = (t) => addMsg('bot', t);
+  function setTyping(on) { typing.style.display = on ? 'block' : 'none'; }
+
+  function showCompanies(companies) {
+    badges.innerHTML = '';
+    if (!companies || !companies.length) return;
+    companies.slice(0, 3).forEach(c => {
+      const tag = document.createElement('span');
+      tag.className = 'kc-badge';
+      tag.textContent = c.name;
+      badges.appendChild(tag);
     });
+  }
 
-    function closeChat() {
-      win.style.display = 'none';
-      launcher.style.display = 'inline-block';
-      setAvatarVisible(true);
-    }
-
-    closeBtn.addEventListener('click', closeChat);
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
-
-    function addMsg(role, text) {
-      const row = document.createElement('div');
-      row.className = `kc-msg ${role}`;
-      const bubble = document.createElement('div');
-      bubble.className = 'kc-bubble';
-      bubble.textContent = text;
-      row.appendChild(bubble);
-      msgs.appendChild(row);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-    const addUser = (t) => addMsg('user', t);
-    const addBot  = (t) => addMsg('bot', t);
-    function setTyping(on) { typing.style.display = on ? 'block' : 'none'; }
-    function showCompanies(companies) {
-      badges.innerHTML = '';
-      if (!companies || !companies.length) return;
-      companies.slice(0, 3).forEach(c => {
-        const tag = document.createElement('span');
-        tag.className = 'kc-badge';
-        tag.textContent = c.name;
-        badges.appendChild(tag);
+  // Send message
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addUser(text);
+    setTyping(true);
+    sendBtn.disabled = true;
+    try {
+      const payload = {
+        session_id: getSessionId(),
+        message: text,
+        utm_source: "web" // optional telemetry
+      };
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
+      const data = await res.json();
+      setTyping(false);
+      sendBtn.disabled = false;
+      showCompanies(data.companies);
+      if (data.answer) addBot(data.answer);
+      else if (data.error) addBot("Error: " + data.error);
+      else addBot("No response from server.");
+    } catch (err) {
+      setTyping(false);
+      sendBtn.disabled = false;
+      addBot("Network error. Please try again.");
     }
+  }
 
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
-      addUser(text);
-      setTyping(true);
-      sendBtn.disabled = true;
-      try {
-        const res = await fetch(`${API_BASE}/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: getSessionId(), message: text })
-        });
-        const data = await res.json();
-        setTyping(false);
-        sendBtn.disabled = false;
-        showCompanies(data.companies);
-        console.log("Response:", data);
-        if (data.answer) addBot(data.answer);
-        else if (data.error) addBot("Error: " + data.error);
-        else addBot("No response from server.");
-      } catch (err) {
-        setTyping(false);
-        sendBtn.disabled = false;
-        addBot("Network error. Please try again.");
-      }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
-  </script>
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+</script>
 </body>
 </html>
