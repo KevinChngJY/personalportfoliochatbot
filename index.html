@@ -257,7 +257,7 @@
 
   <script>
   // --- Config: prod/local toggle ---
-  const PROD = True; // set to true on your live site if you want
+  const PROD = false; // set to true on your live site if you want
   const API_BASE = PROD
     ? "https://stingray-app-9hiam.ondigitalocean.app"
     : "http://localhost:8080";
@@ -336,7 +336,7 @@
     // Clear chat UI
     msgs.innerHTML = "";
     badges.innerHTML = "";
-    clearRole(); 
+    clearRole();
     addBot("Started a new conversation. How can I help?");
   });
 
