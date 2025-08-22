@@ -833,180 +833,237 @@
   const _origCloseChat_wrap = closeChat;
   window.closeChat = function() { if (isSmallScreen()) restoreToBaseline(); _origCloseChat_wrap(); };
 
-  /* ========= Auto-close on inactivity (overlay + countdown) ========= */
-  const INACTIVITY_MS = 5 * 60 * 1000;   // 5 minutes
-  const AUTO_CLOSE_COUNTDOWN_MS = 3000;  // 3 seconds
+  /* ========= Auto-close on inactivity (CONTINUES when collapsed) ========= */
+const INACTIVITY_MS = 5 * 60 * 1000;   // 5 minutes
+const AUTO_CLOSE_COUNTDOWN_MS = 3000;  // 3 seconds
 
-  (function () {
-    // Inject overlay CSS once
-    (function injectStylesOnce() {
-      if (document.getElementById('kc-autoclose-styles')) return;
-      const css = `
-#kc-autoclose{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,27,78,0.55);backdrop-filter:blur(2px);z-index:9999}
-.kc-ac-card{width:min(90%,320px);background:#fff;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,0.18);padding:20px 18px;text-align:center}
-.kc-ac-icon{width:42px;height:42px;margin:0 auto 10px;border-radius:9999px;background:#eef3ff;display:flex;align-items:center;justify-content:center}
-.kc-ac-title{font-weight:700;color:#031B4E;margin-bottom:4px}
-.kc-ac-sub{font-size:.92rem;color:#4a5b7a;margin-bottom:12px}
-.kc-ac-count{font-size:28px;font-weight:800;margin-bottom:12px}
-.kc-ac-progress{height:6px;background:#e8eef7;border-radius:9999px;overflow:hidden}
-.kc-ac-progress>span{display:block;height:100%;background:#0061EB;width:100%}
-@keyframes kcShrink{from{width:100%}to{width:0%}}`;
-      const style = document.createElement('style');
-      style.id = 'kc-autoclose-styles';
-      style.textContent = css;
-      document.head.appendChild(style);
-    })();
-
-    let _inactivityTimer = null;
-    let _closeCountdownTimer = null;
-    let _closeHardTimer = null;
-
-    function ensureAutoCloseOverlay() {
-      let ac = document.getElementById('kc-autoclose');
-      if (ac) return ac;
-      ac = document.createElement('div');
-      ac.id = 'kc-autoclose';
-      ac.innerHTML = `
-        <div class="kc-ac-card" role="alert" aria-live="assertive">
-          <div class="kc-ac-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                 stroke="#0061EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v10" />
-              <path d="M5 13a7 7 0 1 0 14 0" />
-            </svg>
-          </div>
-          <div class="kc-ac-title">Closing chat…</div>
-          <div class="kc-ac-sub">Refreshing your session for next time</div>
-          <div class="kc-ac-count" id="kc-ac-count">3</div>
-          <div class="kc-ac-progress"><span id="kc-ac-bar"></span></div>
-        </div>`;
-      win.appendChild(ac);
-      ac.addEventListener('click', e => e.stopPropagation());
-      return ac;
+(function () {
+  /* ---------- tiny CSS for launcher pulse when collapsed ---------- */
+  (function injectOnce(){
+    if (document.getElementById('kc-autoclose-launcher-css')) return;
+    const style = document.createElement('style');
+    style.id = 'kc-autoclose-launcher-css';
+    style.textContent = `
+#kc-chat-launcher.kc-countdown::after{
+  content:""; position:absolute; inset:-6px; border-radius:9999px;
+  border:2px solid rgba(0,97,235,.55);
+  box-shadow:0 0 0 6px rgba(0,97,235,.08), 0 0 18px rgba(0,97,235,.25);
+  animation: kcPulse 1s ease-in-out infinite;
+}
+@keyframes kcPulse { 0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)} }
+    `;
+    document.head.appendChild(style);
+    // launcher needs position:relative so the ::after ring anchors correctly
+    if (launcher && getComputedStyle(launcher).position === 'static') {
+      launcher.style.position = 'relative';
     }
+  })();
 
-    function showAutoCloseOverlay(ms = AUTO_CLOSE_COUNTDOWN_MS) {
-      const ac = ensureAutoCloseOverlay();
-      ac.style.display = 'flex';
-      const countEl = ac.querySelector('#kc-ac-count');
-      const barEl   = ac.querySelector('#kc-ac-bar');
-      if (barEl) barEl.style.animation = `kcShrink ${ms}ms linear forwards`;
-      let remaining = Math.ceil(ms / 1000);
-      if (countEl) countEl.textContent = remaining;
-      clearInterval(_closeCountdownTimer);
-      _closeCountdownTimer = setInterval(() => {
-        remaining -= 1;
-        if (countEl) countEl.textContent = Math.max(0, remaining);
-        if (remaining <= 0) {
-          clearInterval(_closeCountdownTimer);
-          _closeCountdownTimer = null;
-        }
+  /* ---------- State ---------- */
+  let _armed = false;                 // start counting only after first open
+  let _inactivityTimer = null;
+  let _closeHardTimer  = null;
+  let _closeTickInt    = null;
+  let _hardDeadline    = 0;           // timestamp when auto-close fires
+
+  const isChatOpen = () =>
+    win && getComputedStyle(win).display !== 'none' && win.classList.contains('kc-modal');
+
+  /* ---------- Overlay (in-window) ---------- */
+  function ensureAutoCloseOverlay() {
+    let ac = document.getElementById('kc-autoclose');
+    if (ac) return ac;
+    ac = document.createElement('div');
+    ac.id = 'kc-autoclose';
+    ac.style.cssText = `
+      position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(3,27,78,0.55); backdrop-filter:blur(2px); z-index:9999;`;
+    ac.innerHTML = `
+      <div class="kc-ac-card" role="alert" aria-live="assertive"
+           style="width:min(90%,320px);background:#fff;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.18);padding:20px 18px;text-align:center">
+        <div class="kc-ac-icon" aria-hidden="true"
+             style="width:42px;height:42px;margin:0 auto 10px;border-radius:9999px;background:#eef3ff;display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+               stroke="#0061EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v10" />
+            <path d="M5 13a7 7 0 1 0 14 0" />
+          </svg>
+        </div>
+        <div class="kc-ac-title" style="font-weight:700;color:#031B4E;margin-bottom:4px">Closing chat…</div>
+        <div class="kc-ac-sub"   style="font-size:.92rem;color:#4a5b7a;margin-bottom:12px">Refreshing your session for next time</div>
+        <div class="kc-ac-count" id="kc-ac-count" style="font-size:28px;font-weight:800;margin-bottom:12px">3</div>
+        <div class="kc-ac-progress" style="height:6px;background:#e8eef7;border-radius:9999px;overflow:hidden">
+          <span id="kc-ac-bar" style="display:block;height:100%;background:#0061EB;width:100%"></span>
+        </div>
+      </div>`;
+    win.appendChild(ac);
+    ac.addEventListener('click', e => e.stopPropagation());
+    return ac;
+  }
+  function showOverlay(ms) {
+    const ac = ensureAutoCloseOverlay();
+    const bar = ac.querySelector('#kc-ac-bar');
+    const cnt = ac.querySelector('#kc-ac-count');
+    ac.style.display = 'flex';
+    if (bar) {
+      bar.style.animation = `kcShrink ${ms}ms linear forwards`;
+      // add keyframes once (idempotent)
+      if (!document.getElementById('kcShrinkKF')) {
+        const kf = document.createElement('style');
+        kf.id = 'kcShrinkKF';
+        kf.textContent = `@keyframes kcShrink{from{width:100%}to{width:0%}}`;
+        document.head.appendChild(kf);
+      }
+    }
+    if (cnt) {
+      let remain = Math.ceil(ms / 1000);
+      cnt.textContent = remain;
+      if (_closeTickInt) clearInterval(_closeTickInt);
+      _closeTickInt = setInterval(() => {
+        remain -= 1;
+        if (remain <= 0) { clearInterval(_closeTickInt); _closeTickInt = null; }
+        if (cnt) cnt.textContent = Math.max(0, remain);
       }, 1000);
     }
+  }
+  function hideOverlay() {
+    const ac = document.getElementById('kc-autoclose');
+    if (!ac) return;
+    ac.style.display = 'none';
+    const bar = ac.querySelector('#kc-ac-bar');
+    const cnt = ac.querySelector('#kc-ac-count');
+    if (bar) bar.style.animation = '';
+    if (cnt) cnt.textContent = '';
+    if (_closeTickInt) { clearInterval(_closeTickInt); _closeTickInt = null; }
+  }
 
-    function hideAutoCloseOverlay() {
-      const ac = document.getElementById('kc-autoclose');
-      if (!ac) return;
-      ac.style.display = 'none';
-      const bar = ac.querySelector('#kc-ac-bar');
-      if (bar) bar.style.animation = '';
-      const countEl = ac.querySelector('#kc-ac-count');
-      if (countEl) countEl.textContent = '';
-      if (_closeCountdownTimer) { clearInterval(_closeCountdownTimer); _closeCountdownTimer = null; }
-    }
+  /* ---------- Launcher ring when collapsed ---------- */
+  function showLauncherRing()  { launcher?.classList.add('kc-countdown'); }
+  function hideLauncherRing()  { launcher?.classList.remove('kc-countdown'); }
 
-    function clearInactivityTimer() {
-      if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
-    }
-    function startInactivityTimer() {
-      clearInactivityTimer();
-      _inactivityTimer = setTimeout(beginAutoClose, INACTIVITY_MS);
-    }
-    function bumpInactivity() {
-      if (win.classList.contains('kc-modal')) startInactivityTimer();
-    }
+  /* ---------- Timers ---------- */
+  function clearInactivityTimer() {
+    if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
+  }
+  function clearHardTimer() {
+    if (_closeHardTimer)  { clearTimeout(_closeHardTimer);  _closeHardTimer  = null; }
+    if (_closeTickInt)    { clearInterval(_closeTickInt);   _closeTickInt    = null; }
+  }
 
-    function performAutoClose() {
-    // 1) Refresh session id so next chat is brand-new
+  function startInactivityTimer() {
+    if (!_armed) return;                      // only after first open
+    clearInactivityTimer();
+    _inactivityTimer = setTimeout(beginAutoClose, INACTIVITY_MS);
+  }
+  function bumpInactivity() {
+    // bump only from chat interactions (not the whole page)
+    if (_armed && isChatOpen()) startInactivityTimer();
+  }
+
+  function beginAutoClose() {
+    // Set hard deadline and UI depending on whether chat is visible right now
+    _hardDeadline = Date.now() + AUTO_CLOSE_COUNTDOWN_MS;
+    clearHardTimer();
+
+    if (isChatOpen()) {
+      hideLauncherRing();
+      showOverlay(AUTO_CLOSE_COUNTDOWN_MS);
+    } else {
+      hideOverlay();
+      showLauncherRing();
+    }
+    _closeHardTimer = setTimeout(performAutoClose, AUTO_CLOSE_COUNTDOWN_MS);
+  }
+
+  function performAutoClose() {
+    // Wipe UI to a fresh state
     try { resetSessionId(); updateSessionBadge(); } catch {}
-
-    // 2) Wipe ALL chat UI
-    try { hideTyping(); } catch {}
+    try { hideTyping?.(); } catch {}
     try { input.value = ''; } catch {}
     try { msgs.innerHTML = ''; } catch {}
     try { badges.innerHTML = ''; } catch {}
-
-    // role badge (belt & suspenders in case clearRole isn't defined)
-    try { clearRole(); } catch {}
+    try { clearRole?.(); } catch {}
     if (roleBadge) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; }
 
-    // 3) Hide the auto-close overlay
-    try { hideAutoCloseOverlay(); } catch {}
+    // Close chat if open; otherwise just ensure launcher is visible
+    hideOverlay();
+    hideLauncherRing();
+    if (isChatOpen()) { window.closeChat?.(); }
 
-    // 4) Close the chat (restores page + baseline via your wrapped closeChat)
-    if (typeof window.closeChat === 'function') window.closeChat();
-    else {
-      // minimal fallback
-      win.style.display = 'none';
-      launcher.style.display = 'inline-block';
-      overlay.style.display = 'none';
-    }
-
-    // 5) Cleanup timers
-    try { clearTimeout(_inactivityTimer); _inactivityTimer = null; } catch {}
-    try { clearTimeout(_closeHardTimer);  _closeHardTimer  = null; } catch {}
-
-    // 6) Ensure next open shows the greeting
-    // (your launcher click already calls ensureGreeting; wiping msgs is enough)
+    // Disarm until next explicit open
+    _armed = false;
+    clearInactivityTimer();
+    clearHardTimer();
   }
-    function beginAutoClose() {
-      showAutoCloseOverlay(AUTO_CLOSE_COUNTDOWN_MS);
-      clearTimeout(_closeHardTimer);
-      _closeHardTimer = setTimeout(performAutoClose, AUTO_CLOSE_COUNTDOWN_MS);
-    }
 
-    // Hook enter/close to start/stop timers
-    const _origEnterModal = typeof window.enterModal === 'function' ? window.enterModal : null;
-    const _origCloseChat  = typeof window.closeChat  === 'function' ? window.closeChat  : null;
+  /* ---------- Hook open / close ---------- */
+  const __enter = typeof window.enterModal === 'function' ? window.enterModal : null;
+  const __close = typeof window.closeChat  === 'function' ? window.closeChat  : null;
 
-    if (_origEnterModal) {
-      window.enterModal = function () {
-        _origEnterModal();
-        startInactivityTimer();
-      };
-    }
-
-    if (_origCloseChat) {
-      window.closeChat = function () {
-        clearInactivityTimer();
-        hideAutoCloseOverlay();
-        _origCloseChat();
-      };
-    }
-
-    // Count as activity
-    win.addEventListener('pointerdown', bumpInactivity);
-    win.addEventListener('keydown',  bumpInactivity, true);
-    msgs.addEventListener('scroll',  bumpInactivity);
-    input.addEventListener('input',  bumpInactivity);
-    sendBtn.addEventListener('click', bumpInactivity);
-
-    // Also bump when a message is added
-    if (typeof addMsg === 'function') {
-      const _origAddMsg = addMsg;
-      window.addMsg = addMsg = function(role, text) {
-        _origAddMsg(role, text);
-        bumpInactivity();
-      };
-    }
-
-    // If chat already open on load
-    if (win.classList.contains('kc-modal') && getComputedStyle(win).display !== 'none') {
+  if (__enter) {
+    window.enterModal = function () {
+      __enter();
+      // arm on the first open of a “session”
+      if (!_armed) _armed = true;
+      // If a hard countdown is already running (user reopened mid-count),
+      // switch UI from launcher ring to overlay with the remaining time.
+      if (_hardDeadline && Date.now() < _hardDeadline) {
+        const msLeft = Math.max(0, _hardDeadline - Date.now());
+        hideLauncherRing();
+        showOverlay(msLeft);
+      }
       startInactivityTimer();
+    };
+  }
+
+  if (__close) {
+    window.closeChat = function () {
+      // DO NOT stop timers — countdown keeps going while collapsed
+      // just hide overlay & show ring if we are in the countdown window
+      if (_hardDeadline && Date.now() < _hardDeadline) {
+        hideOverlay();
+        showLauncherRing();
+      } else {
+        hideOverlay();
+        hideLauncherRing();
+      }
+      __close();
+    };
+  }
+
+  // If visibility changes (tab hidden), keep timers running but hide heavy UI
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hideOverlay();
+      if (_hardDeadline && Date.now() < _hardDeadline) showLauncherRing();
+    } else {
+      // if chat visible and countdown active, restore overlay with remaining
+      if (isChatOpen() && _hardDeadline && Date.now() < _hardDeadline) {
+        hideLauncherRing();
+        showOverlay(Math.max(0, _hardDeadline - Date.now()));
+      }
     }
-  })();
+  });
+
+  /* ---------- Activity inside chat ---------- */
+  win.addEventListener('pointerdown', bumpInactivity);
+  win.addEventListener('keydown',  bumpInactivity, true);
+  msgs.addEventListener('scroll',  bumpInactivity);
+  input.addEventListener('input',  bumpInactivity);
+  sendBtn.addEventListener('click', bumpInactivity);
+
+  // Also bump when a message is added
+  if (typeof addMsg === 'function') {
+    const _origAddMsg = addMsg;
+    window.addMsg = addMsg = function(role, text) {
+      _origAddMsg(role, text);
+      bumpInactivity();
+    };
+  }
+
+  // If chat is already open on load (rare), arm and start
+  if (isChatOpen()) { _armed = true; startInactivityTimer(); }
+})();
 </script>
 </body>
 </html>
-
-
