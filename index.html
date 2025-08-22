@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kevin | AI Resume Assistant</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
   <style>
     body {
       font-family: 'Roboto', sans-serif;
@@ -13,21 +14,49 @@
       background: #f7f9fc;
       color: #031B4E;
     }
-    header {
+
+    /* ====== HEADER with animated gradient + data network canvas ====== */
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .ds-hero {
+      position: relative;
+      overflow: hidden;
       background: linear-gradient(-45deg, #031B4E, #053071, #06449A, #031B4E);
       background-size: 400% 400%;
       animation: gradientBG 10s ease infinite;
       color: white;
       padding: 40px 20px;
       text-align: center;
+      isolation: isolate;
     }
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+    #ds-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.9;
     }
-    header h1 { font-size: 2.2rem; margin-bottom: 8px; }
-    header p { font-size: 1.1rem; opacity: 0.9; }
+    .ds-hero-copy {
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 2px 16px rgba(0,0,0,0.35);
+    }
+    .ds-hero-copy h1 { font-size: 2.2rem; margin-bottom: 8px; }
+    .ds-hero-copy p { font-size: 1.1rem; opacity: 0.95; }
+    @media (min-width: 768px) {
+      .ds-hero { padding: 72px 24px; }
+      .ds-hero-copy h1 { font-size: 2.6rem; }
+      .ds-hero-copy p { font-size: 1.2rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ds-hero { animation: none; }
+    }
+
     .intro-note {
       text-align: center;
       background: #eaf4ff;
@@ -39,6 +68,7 @@
       border-radius: 5px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     }
+
     section {
       max-width: 1000px;
       margin: 30px auto;
@@ -53,6 +83,7 @@
     th { background-color: #031B4E; color: white; }
     tr:hover { background-color: #f0f4ff; }
     a { color: #0061EB; text-decoration: none; }
+
     footer {
       background: #E5E8ED;
       text-align: center;
@@ -60,6 +91,7 @@
       margin-top: 40px;
       font-size: 0.9rem;
     }
+
     #avatar-status {
       position: fixed;
       bottom: 110px;
@@ -76,19 +108,20 @@
     }
     #avatar-status img { width: 48px; height: 48px; }
     #avatar-status span { font-size: 0.9rem; color: #031B4E; font-weight: bold; }
+
     .responsive-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .responsive-table table { width: 100%; min-width: 600px; }
+
     @media (max-width: 768px) {
-      header h1 { font-size: 1.6rem; }
-      header p, .intro-note { font-size: 0.95rem; }
+      .intro-note { margin: 15px 10px; }
       section { width: 95%; }
       th, td { padding: 10px 8px; font-size: 0.9rem; }
-      .intro-note { margin: 15px 10px; }
       #avatar-status { bottom: 90px; right: 10px; padding: 8px; }
       #avatar-status img { width: 36px; height: 36px; }
       #avatar-status span { font-size: 0.75rem; }
     }
-    /* Chatbot styles */
+
+    /* ====== CHAT ====== */
     #kc-chat-launcher {
       position: fixed; bottom: 50px; right: 50px;
       background: #0061EB; border-radius: 50%; width: 60px; height: 60px;
@@ -98,7 +131,8 @@
     #kc-chat-window {
       position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px;
       background: #fff; border: 1px solid #ccc; border-radius: 10px;
-      display: none; flex-direction: column; overflow: hidden; z-index: 1000;
+      display: none; flex-direction: column; overflow: hidden; z-index: 1001;
+      transition: all 160ms ease;
     }
     #kc-header {
       background: #031B4E; color: white; padding: 10px;
@@ -107,27 +141,93 @@
     #kc-messages {
       flex: 1; padding: 10px; overflow-y: auto; font-size: 0.9rem;
     }
-    .kc-msg { margin-bottom: 8px; }
-    .kc-msg.user { text-align: right; }
+    .kc-badge { display: inline-block; background: #d9e9ff; color: #031B4E;
+      padding: 3px 6px; border-radius: 6px; font-size: 0.75rem; margin: 2px; }
+    #kc-badges { padding: 4px 8px; }
+    #kc-role { margin-left: 8px; }
+    #kc-input-box { display: flex; border-top: 1px solid #ccc; }
+    #kc-input { flex: 1; border: none; padding: 10px; font-size: 0.9rem; }
+    #kc-send { background: #0061EB; border: none; color: white; padding: 0 15px; cursor: pointer; }
+
+    /* Overlay for centered modal */
+    #kc-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 1000; display: none;
+    }
+    /* Centered modal state */
+    #kc-chat-window.kc-modal {
+      top: 50%; left: 50%; bottom: auto; right: auto;
+      transform: translate(-50%, -50%);
+      width: 50vw; height: 75vh;
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+    }
+    @media (max-width: 768px) {
+      #kc-chat-window.kc-modal {
+        top: 0; left: 0; transform: none;
+        width: 100vw; height: 100vh; border-radius: 0;
+      }
+    }
+
+    /* Messages + avatar */
+    .kc-msg { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
     .kc-bubble {
       display: inline-block; padding: 8px 12px; border-radius: 10px;
       max-width: 80%;
     }
-    .kc-msg.user .kc-bubble { background: #0061EB; color: white; }
-    .kc-msg.bot .kc-bubble { background: #E5E8ED; color: black; }
-    #kc-input-box { display: flex; border-top: 1px solid #ccc; }
-    #kc-input { flex: 1; border: none; padding: 10px; font-size: 0.9rem; }
-    #kc-send { background: #0061EB; border: none; color: white; padding: 0 15px; cursor: pointer; }
-    #kc-typing { font-size: 0.8rem; color: #666; display: none; }
-    .kc-badge { display: inline-block; background: #d9e9ff; color: #031B4E;
-      padding: 3px 6px; border-radius: 6px; font-size: 0.75rem; margin: 2px; }
+    .kc-msg.user { justify-content: flex-end; }
+    .kc-msg.user .kc-bubble { order: 2; background: #0061EB; color: #fff; }
+    .kc-msg.bot .kc-bubble { background: #E5E8ED; color: #000; }
+    .kc-msg.user .kc-avatar { display: none; }
+
+    .kc-avatar {
+      width: 28px; height: 28px; flex: 0 0 28px;
+      border-radius: 50%; background: #031B4E;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .kc-avatar svg { width: 18px; height: 18px; color: #fff; }
+    .kc-msg.bot .kc-bubble { max-width: calc(100% - 40px); }
+
+    /* Typing row (bot style) */
+    .kc-typing-row .kc-bubble { background: #E5E8ED; color: #000; }
+    .kc-typing-dots { display: inline-block; width: 1.5em; text-align: left; }
+    .kc-typing-dots span {
+      display: inline-block; width: 0.3em; height: 0.3em; margin-left: 0.15em;
+      border-radius: 50%; background: #8aa0c8; opacity: 0.2; animation: kc-blink 1.2s infinite;
+    }
+    .kc-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .kc-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes kc-blink { 0%,80%,100% {opacity:.2;transform:translateY(0)} 40% {opacity:1;transform:translateY(-1px)} }
+
+    /* Markdown polish in bubbles */
+    .kc-bubble h1, .kc-bubble h2, .kc-bubble h3 { margin: 0.4em 0 0.2em; }
+    .kc-bubble p { margin: 0.4em 0; }
+    .kc-bubble ul, .kc-bubble ol { margin: 0.4em 0 0.4em 1.2em; }
+    .kc-bubble code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .kc-bubble pre { overflow: auto; padding: 8px; border-radius: 6px; }
+    .kc-bubble table { border-collapse: collapse; width: 100%; }
+    .kc-bubble th, .kc-bubble td { border: 1px solid #ddd; padding: 6px 8px; }
+    .kc-bubble blockquote { border-left: 3px solid #ddd; margin: 0.6em 0; padding: 0.1em 0.8em; color: #555; }
+    .kc-bubble { overflow-x: auto; }
   </style>
+
+  <!-- Markdown parser + sanitizer + code highlight -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Kevin – Senior Data Scientist</h1>
-    <p>Explore my experience, projects, and skills</p>
+  <!-- HEADER with animated canvas -->
+  <header class="ds-hero">
+    <canvas id="ds-bg" aria-hidden="true"></canvas>
+    <div class="ds-hero-copy">
+      <h1>Kevin – Senior Data Scientist</h1>
+      <p>Explore my experience, projects, and skills</p>
+    </div>
   </header>
+
   <div class="intro-note">
     💬 My AI chatbot is available on the <strong>bottom-right corner</strong> — feel free to ask about my resume or portfolio.
   </div>
@@ -144,14 +244,14 @@
           <td>SGH AI Antibiotic Prescription Prediction</td>
           <td>The system determines if antibiotics are needed (bacterial infections only) and recommends the specific antibiotic and dose based on patient clinical data. Led a 2-person team to successful delivery.</td>
           <td>PyTorch, MLFlow, Streamlit, Python</td>
-          <td><a href="https://www.channelnewsasia.com/singapore/ai-antibiotic-resistance-prescription-sgh-hospital-pneumonia-4759296">View Project</a></td>
+          <td><a href="https://www.channelnewsasia.com/singapore/ai-antibiotic-resistance-prescription-sgh-hospital-pneumonia-4759296" target="_blank" rel="noopener">View Project</a></td>
         </tr>
         <tr>
           <td>2</td>
           <td>Career Navigator (Graph Recommender)</td>
           <td>Recommends skills/courses for career advancement and uses GenAI to generate resumes. Served as Data Scientist and Data Engineer Lead on a 10–15 member team.</td>
           <td>Neo4j, Apache Lucene, GenAI, Java, AngularJS, Apache NiFi, Content-based filtering</td>
-          <td><a href="https://neo4j.com/blog/dxc-data-driven-employee-career-development/">View Project</a></td>
+          <td><a href="https://neo4j.com/blog/dxc-data-driven-employee-career-development/" target="_blank" rel="noopener">View Project</a></td>
         </tr>
         <tr>
           <td>3</td>
@@ -165,14 +265,14 @@
           <td>Digital Twin Traffic Simulation</td>
           <td>Developed traffic simulation platform for layout optimization and flow planning, supporting different scenario modeling.</td>
           <td>SUMO, Python, SQL Server, Django, PDF Reporting</td>
-          <td><a href="https://dxc.com/us/en/insights/perspectives/paper/how-advanced-technology-can-empower-smart-border-checkpoints">View Project</a></td>
+          <td><a href="https://dxc.com/us/en/insights/perspectives/paper/how-advanced-technology-can-empower-smart-border-checkpoints" target="_blank" rel="noopener">View Project</a></td>
         </tr>
         <tr>
           <td>5</td>
           <td>Solution Architect Assistant (Hackathon Runner-Up)</td>
           <td>AI solution for tender response automation (RFP analysis, cost estimation, risk prediction, proposal generation). Runner-up in DXC Global Innovation Hackathon FY’25.</td>
           <td>Azure GenAI, Vector DB, ReactJS</td>
-          <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/37813555/multiple-media-viewer/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E&treasuryMediaId=1737352405914&type=IMAGE">View Project</a></td>
+          <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/37813555/multiple-media-viewer/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E&treasuryMediaId=1737352405914&type=IMAGE" target="_blank" rel="noopener">View Project</a></td>
         </tr>
         <tr>
           <td>6</td>
@@ -191,10 +291,9 @@
         <tr>
           <td>8</td>
           <td>Personal Projects</td>
-          <td>Example : Gait Recognition, Intelligent Reservation System, Image Based Traffic Density Real Time Prediction Using SG LTA
-            Traffic Camera, Stock Financial Bot</td>
-          <td>Python, OpenCV, Django, TensorFlow, PyTorch, Pandas, ONNX, Intel Openvino</td>
-          <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E">Project List</a></td>
+          <td>Example: Gait Recognition, Intelligent Reservation System, Image-Based Traffic Density Real-Time Prediction Using SG LTA Traffic Camera, Stock Financial Bot</td>
+          <td>Python, OpenCV, Django, TensorFlow, PyTorch, Pandas, ONNX, Intel OpenVINO</td>
+          <td><a href="https://www.linkedin.com/in/kevin-chng-73485387/details/projects/?profileId=ACoAABJ0_VgBhyqEw6PnVSI55CKTson3e7-Ao0E" target="_blank" rel="noopener">Project List</a></td>
         </tr>
       </table>
     </div>
@@ -205,10 +304,10 @@
       <h2>🧠 Key Skills</h2>
       <table>
         <tr><th>Category</th><th>Skills</th></tr>
-        <tr><td>Machine Learning & AI</td><td>scikit-learn, XGBoost, LightGBM, NLP, GenAI, Tensorflow</td></tr>
+        <tr><td>Machine Learning & AI</td><td>scikit-learn, XGBoost, LightGBM, NLP, GenAI, TensorFlow</td></tr>
         <tr><td>MLOps & Deployment</td><td>MLflow, Docker, Airflow, CI/CD, monitoring, model governance</td></tr>
         <tr><td>Big Data & Engineering</td><td>Spark, Kafka, NiFi, SQL, Pandas, PySpark</td></tr>
-        <tr><td>Cloud Platforms</td><td>AWS (SageMaker, EC2), Azure, RedHat OpenShift</td></tr>
+        <tr><td>Cloud Platforms</td><td>AWS (SageMaker, EC2), Azure, Red Hat OpenShift</td></tr>
       </table>
     </div>
   </section>
@@ -218,36 +317,38 @@
       <h2>Community Profile</h2>
       <table>
         <tr><th>Platform</th><th>Profile</th></tr>
-        <tr><td>GitHub</td><td><a href="https://github.com/KevinChngJY" target="_blank">github.com/KevinChngJY</a></td></tr>
-        <tr><td>LinkedIn</td><td><a href="https://www.linkedin.com/in/kevinchngjy" target="_blank">linkedin.com/in/kevinchngjy</a></td></tr>
-        <tr><td>Medium</td><td><a href="https://medium.com/@kevinchngjy" target="_blank">medium.com/@kevinchngjy</a></td></tr>
-        <tr><td>MATLAB COMMUNITY</td><td><a href="https://www.mathworks.com/matlabcentral/profile/authors/kevinchngjy" target="_blank">mathworks.com/matlabcentral/profile/authors/kevinchngjy</a></td></tr>
+        <tr><td>GitHub</td><td><a href="https://github.com/KevinChngJY" target="_blank" rel="noopener">github.com/KevinChngJY</a></td></tr>
+        <tr><td>LinkedIn</td><td><a href="https://www.linkedin.com/in/kevinchngjy" target="_blank" rel="noopener">linkedin.com/in/kevinchngjy</a></td></tr>
+        <tr><td>Medium</td><td><a href="https://medium.com/@kevinchngjy" target="_blank" rel="noopener">medium.com/@kevinchngjy</a></td></tr>
+        <tr><td>MATLAB COMMUNITY</td><td><a href="https://www.mathworks.com/matlabcentral/profile/authors/kevinchngjy" target="_blank" rel="noopener">mathworks.com/matlabcentral/profile/authors/kevinchngjy</a></td></tr>
       </table>
     </div>
   </section>
 
-  <!-- Avatar -->
+  <!-- Avatar status -->
   <div id="avatar-status">
     <img id="avatar-img" src="https://media.giphy.com/media/xTk9ZvMnbIiIew7IpW/giphy.gif" alt="Loading assistant..." />
     <span id="avatar-text">Loading assistant...</span>
   </div>
 
   <!-- Chat Launcher -->
-  <button id="kc-chat-launcher">💬</button>
+  <button id="kc-chat-launcher" aria-label="Open chat">💬</button>
+
+  <!-- Modal overlay -->
+  <div id="kc-overlay"></div>
 
   <!-- Chat Window -->
-  <div id="kc-chat-window">
+  <div id="kc-chat-window" role="dialog" aria-label="Virtual Kevin chat">
     <div id="kc-header">
       <span>Virtual Kevin</span>
       <div>
         <button id="kc-new" style="background:none;border:1px solid #fff;color:white;padding:2px 8px;border-radius:6px;cursor:pointer;margin-right:8px;">New</button>
-        <button id="kc-close" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;">✖</button>
+        <button id="kc-close" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;" aria-label="Close">✖</button>
       </div>
     </div>
-    <div id="kc-messages"></div>
-    <div id="kc-typing">Kevin is typing...</div>
     <div id="kc-badges"></div>
-    <div id="kc-role" class="kc-badge" style="display:none;margin-left:8px;"></div>
+    <div id="kc-role" class="kc-badge" style="display:none;"></div>
+    <div id="kc-messages" aria-live="polite"></div>
     <div id="kc-session" style="font-size:10px;color:#666;text-align:right;padding:4px 8px;">sid: …</div>
     <div id="kc-input-box">
       <input id="kc-input" type="text" placeholder="Type your message..." />
@@ -255,172 +356,361 @@
     </div>
   </div>
 
+  <!-- Markdown & Chat Logic -->
   <script>
-  // --- Config: prod/local toggle ---
-  const PROD = true; // set to true on your live site if you want
-  const API_BASE = PROD
-    ? "https://stingray-app-9hiam.ondigitalocean.app"
-    : "http://localhost:8080";
+    // --- Config ---
+    const PROD = false;
+    const API_BASE = PROD ? "https://stingray-app-9hiam.ondigitalocean.app" : "http://localhost:8080";
+    const SESSION_KEY = "kc_chat_anon_id";
 
-  // --- Session management ---
-  const SESSION_KEY = "kc_chat_anon_id";
-  function getSessionId() {
-    let id = localStorage.getItem(SESSION_KEY);
-    if (!id) {
-      id = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
-      localStorage.setItem(SESSION_KEY, id);
+    // --- Session management ---
+    function getSessionId() {
+      let id = localStorage.getItem(SESSION_KEY);
+      if (!id) {
+        id = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
+        localStorage.setItem(SESSION_KEY, id);
+      }
+      return id;
     }
-    return id;
-  }
-  function resetSessionId() {
-    const old = localStorage.getItem(SESSION_KEY);
-    localStorage.removeItem(SESSION_KEY);
-    const fresh = getSessionId();
-    // If you created a /reset endpoint, you can notify backend to clear memory:
-    // fetch(`${API_BASE}/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: old }) }).catch(()=>{});
-    return { old, fresh };
-  }
-
-  // --- UI refs ---
-  const launcher = document.getElementById('kc-chat-launcher');
-  const win = document.getElementById('kc-chat-window');
-  const closeBtn = document.getElementById('kc-close');
-  const newBtn = document.getElementById('kc-new');
-  const msgs = document.getElementById('kc-messages');
-  const typing = document.getElementById('kc-typing');
-  const input = document.getElementById('kc-input');
-  const sendBtn = document.getElementById('kc-send');
-  const badges = document.getElementById('kc-badges');
-  const avatarBox = document.getElementById('avatar-status');
-  const sessionBadge = document.getElementById('kc-session');
-  const roleBadge = document.getElementById('kc-role');
-
-  // Show current session id for debugging (optional)
-  function updateSessionBadge() {
-    if (sessionBadge) sessionBadge.textContent = `sid: ${getSessionId()}`;
-  }
-  updateSessionBadge();
-
-  // Avatar status
-  setTimeout(() => {
-    document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
-    document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
-  }, 3000);
-
-  function setAvatarVisible(on) {
-    if (!avatarBox) return;
-    avatarBox.style.display = on ? 'flex' : 'none';
-  }
-
-  launcher.addEventListener('click', () => {
-    win.style.display = 'flex';
-    launcher.style.display = 'none';
-    setAvatarVisible(false);
-    if (msgs.children.length === 0) {
-      addBot("Hello! I’m Virtual Kevin. Ask me about my portfolio, background, or projects.");
+    function resetSessionId() {
+      const old = localStorage.getItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      const fresh = getSessionId();
+      return { old, fresh };
     }
-  });
 
-  function closeChat() {
-    win.style.display = 'none';
-    launcher.style.display = 'inline-block';
-    setAvatarVisible(true);
-  }
-  closeBtn.addEventListener('click', closeChat);
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
+    // --- DOM refs ---
+    const launcher = document.getElementById('kc-chat-launcher');
+    const win = document.getElementById('kc-chat-window');
+    const overlay = document.getElementById('kc-overlay');
+    const closeBtn = document.getElementById('kc-close');
+    const newBtn = document.getElementById('kc-new');
+    const msgs = document.getElementById('kc-messages');
+    const input = document.getElementById('kc-input');
+    const sendBtn = document.getElementById('kc-send');
+    const badges = document.getElementById('kc-badges');
+    const avatarBox = document.getElementById('avatar-status');
+    const sessionBadge = document.getElementById('kc-session');
+    const roleBadge = document.getElementById('kc-role');
 
-  // New chat: reset session id and clear UI
-  newBtn.addEventListener('click', async () => {
-    const { old, fresh } = resetSessionId();
+    // Bot "IT professional" icon (inline SVG)
+    const BOT_ICON = `
+    <svg viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        aria-hidden="true" focusable="false">
+      <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+      <circle cx="12" cy="10" r="2"></circle>
+      <path d="M8 14c1.5-2 6.5-2 8 0"></path>
+      <path d="M6 20h12"></path>
+    </svg>`;
+
+    // Show current session id
+    function updateSessionBadge() {
+      if (sessionBadge) sessionBadge.textContent = `sid: ${getSessionId()}`;
+    }
     updateSessionBadge();
-    // Clear chat UI
-    msgs.innerHTML = "";
-    badges.innerHTML = "";
-    clearRole();
-    addBot("Started a new conversation. How can I help?");
-  });
 
-  // Message helpers
-  function addMsg(role, text) {
-    const row = document.createElement('div');
-    row.className = `kc-msg ${role}`;
-    const bubble = document.createElement('div');
-    bubble.className = 'kc-bubble';
-    bubble.textContent = text;
-    row.appendChild(bubble);
-    msgs.appendChild(row);
-    msgs.scrollTop = msgs.scrollHeight;
-  }
-  const addUser = (t) => addMsg('user', t);
-  const addBot  = (t) => addMsg('bot', t);
-  function setTyping(on) { typing.style.display = on ? 'block' : 'none'; }
+    // Avatar status tweak
+    setTimeout(() => {
+      document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
+      document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
+    }, 3000);
+    function setAvatarVisible(on) {
+      if (!avatarBox) return;
+      avatarBox.style.display = on ? 'flex' : 'none';
+    }
 
-  function showRole(role) {
-    if (!roleBadge) return;
-    if (!role) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; return; }
-    const label = role === 'recruiter_interviewer' ? 'Recruiter/Interviewer' : 'General';
-    roleBadge.textContent = `Role: ${label}`;
-    roleBadge.style.display = 'inline-block';
-  }
+    // --- Modal helpers ---
+    function enterModal() {
+      if (!win) return;
+      win.style.display = 'flex';
+      launcher.style.display = 'none';
+      win.classList.add('kc-modal');
+      if (overlay) overlay.style.display = 'block';
+    }
+    function exitModal() {
+      if (!win) return;
+      win.classList.remove('kc-modal');
+      if (overlay) overlay.style.display = 'none';
+    }
 
-  function clearRole() {
-    if (!roleBadge) return;
-    roleBadge.style.display = 'none';
-    roleBadge.textContent = '';
-  }
-
-  function showCompanies(companies) {
-    badges.innerHTML = '';
-    if (!companies || !companies.length) return;
-    companies.slice(0, 3).forEach(c => {
-      const tag = document.createElement('span');
-      tag.className = 'kc-badge';
-      tag.textContent = c.name;
-      badges.appendChild(tag);
+    // Open chat centered immediately
+    launcher.addEventListener('click', () => {
+      win.style.display = 'flex';
+      launcher.style.display = 'none';
+      enterModal();
+      setAvatarVisible(false);
+      if (msgs.children.length === 0) addBot("Hello! I’m **Virtual Kevin**. Ask me about my portfolio, background, or projects.");
     });
-  }
 
-  // Send message
-  async function sendMessage() {
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  addUser(text);
-  setTyping(true);
-  sendBtn.disabled = true;
+    function closeChat() {
+      win.style.display = 'none';
+      launcher.style.display = 'inline-block';
+      exitModal();
+      setAvatarVisible(true);
+    }
+    closeBtn.addEventListener('click', closeChat);
+    overlay.addEventListener('click', exitModal);
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
 
-  try {
-    const payload = {                    // ← define it here
-      session_id: getSessionId(),
-      message: text,
-      utm_source: "web"
-    };
-
-    const res = await fetch(`${API_BASE}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    // New chat
+    newBtn.addEventListener('click', async () => {
+      resetSessionId();
+      updateSessionBadge();
+      msgs.innerHTML = "";
+      badges.innerHTML = "";
+      clearRole();
+      addBot("Started a new conversation. How can I help?");
+      enterModal();
     });
-    const data = await res.json();
 
-    setTyping(false);
-    sendBtn.disabled = false;
+    // Messages (Markdown for bot, plain text for user)
+    function addMsg(role, text) {
+      const row = document.createElement('div');
+      row.className = `kc-msg ${role}`;
 
-    showRole(data.role);
-    showCompanies(data.companies);
+      if (role === 'bot') {
+        const avatar = document.createElement('div');
+        avatar.className = 'kc-avatar';
+        avatar.innerHTML = BOT_ICON;
+        avatar.title = 'Virtual Kevin';
+        row.appendChild(avatar);
+      }
 
-    if (data.answer) addBot(data.answer);
-    else if (data.error) addBot("Error: " + (data.error || 'unknown'));
-    else addBot("No response from server.");
-  } catch (err) {
-    setTyping(false);
-    sendBtn.disabled = false;
-    addBot("Network error. Please try again.");
-  }
-}
+      const bubble = document.createElement('div');
+      bubble.className = 'kc-bubble';
 
-  sendBtn.addEventListener('click', sendMessage);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
-</script>
+      if (role === 'bot') {
+        const html = DOMPurify.sanitize(marked.parse(text || ''));
+        bubble.innerHTML = html;
+      } else {
+        bubble.textContent = text;
+      }
+
+      row.appendChild(bubble);
+      msgs.appendChild(row);
+      msgs.scrollTop = msgs.scrollHeight;
+
+      if (role === 'bot' && window.hljs) {
+        row.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+      }
+    }
+    const addUser = (t) => addMsg('user', t);
+    const addBot  = (t) => addMsg('bot', t);
+
+    function showRole(role) {
+      if (!roleBadge) return;
+      if (!role) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; return; }
+      const label = role === 'recruiter_interviewer' ? 'Recruiter/Interviewer' : 'General';
+      roleBadge.textContent = `Role: ${label}`;
+      roleBadge.style.display = 'inline-block';
+    }
+    function clearRole() {
+      if (!roleBadge) return;
+      roleBadge.style.display = 'none';
+      roleBadge.textContent = '';
+    }
+    function showCompanies(companies) {
+      badges.innerHTML = '';
+      if (!companies || !companies.length) return;
+      companies.slice(0, 3).forEach(c => {
+        const tag = document.createElement('span');
+        tag.className = 'kc-badge';
+        tag.textContent = c.name;
+        badges.appendChild(tag);
+      });
+    }
+
+    // Clicking message or focusing input keeps it centered
+    document.getElementById('kc-messages').addEventListener('click', (e) => {
+      if (e.target.closest('.kc-bubble')) enterModal();
+    });
+    document.getElementById('kc-input').addEventListener('focus', enterModal);
+
+    // Typing indicator (bot row)
+    let typingRow = null;
+    function showTyping() {
+      if (typingRow) return;
+      typingRow = document.createElement('div');
+      typingRow.className = 'kc-msg bot kc-typing-row';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'kc-avatar';
+      avatar.innerHTML = BOT_ICON;
+      avatar.title = 'Virtual Kevin';
+      typingRow.appendChild(avatar);
+
+      const bubble = document.createElement('div');
+      bubble.className = 'kc-bubble';
+      bubble.innerHTML = `Kevin is typing <span class="kc-typing-dots"><span></span><span></span><span></span></span>`;
+      typingRow.appendChild(bubble);
+
+      msgs.appendChild(typingRow);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+    function hideTyping() {
+      if (!typingRow) return;
+      try { msgs.removeChild(typingRow); } catch {}
+      typingRow = null;
+    }
+
+    // Send message
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addUser(text);
+      showTyping();
+      sendBtn.disabled = true;
+
+      try {
+        const payload = { session_id: getSessionId(), message: text, utm_source: "web" };
+        const res = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const ctype = (res.headers.get('content-type') || '').toLowerCase();
+
+        hideTyping();
+        sendBtn.disabled = false;
+
+        if (ctype.includes('text/markdown')) {
+          const md = await res.text();
+          addBot(md);
+          return;
+        }
+
+        const data = await res.json();
+        showRole(data.role);
+        showCompanies(data.companies);
+
+        if (data.answer) addBot(data.answer);
+        else if (data.error) addBot(`**Error:** ${data.error}`);
+        else addBot("_No response from server._");
+
+      } catch (err) {
+        hideTyping();
+        sendBtn.disabled = false;
+        addBot("**Network error.** Please try again.");
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    // ====== HEADER data-network animation ======
+    (() => {
+      const canvas = document.getElementById('ds-bg');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const BG_LINE = 'rgba(255,255,255,0.18)';
+      const BG_NODE = 'rgba(255,255,255,0.85)';
+      const ACCENT  = 'rgba(0,145,255,0.45)';
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        w = Math.max(1, Math.floor(rect.width));
+        h = Math.max(1, Math.floor(rect.height));
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      const nodes = [];
+      const mouse = { x: null, y: null, active: false };
+      const MAX_COUNT = () => Math.max(18, Math.min(Math.round((w*h)/18000), 80));
+      function spawnNodes(n) {
+        for (let i = 0; i < n; i++) {
+          nodes.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            r: 1.2 + Math.random() * 1.8
+          });
+        }
+      }
+      spawnNodes(MAX_COUNT());
+
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = (e.clientX - rect.left);
+        mouse.y = (e.clientY - rect.top);
+        mouse.active = true;
+      });
+      canvas.addEventListener('mouseleave', () => { mouse.active = false; });
+
+      function connectThreshold() { return Math.max(48, Math.min(140, Math.sqrt(w*h) / 14)); }
+      const FRICTION = 0.998;
+
+      let rafId = null;
+      function drawFrame() {
+        const want = MAX_COUNT();
+        if (want > nodes.length) spawnNodes(want - nodes.length);
+        if (want < nodes.length) nodes.splice(want, nodes.length - want);
+
+        ctx.clearRect(0, 0, w, h);
+
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i];
+          if (mouse.active) {
+            const dx = n.x - mouse.x, dy = n.y - mouse.y;
+            const dist2 = dx*dx + dy*dy, rad = 80;
+            if (dist2 < rad*rad) {
+              const dist = Math.sqrt(dist2) || 0.001;
+              const force = (rad - dist) / rad * 0.015;
+              n.vx += (dx / dist) * force;
+              n.vy += (dy / dist) * force;
+            }
+          }
+          n.x += n.vx; n.y += n.vy;
+          n.vx *= FRICTION; n.vy *= FRICTION;
+          if (n.x < 0 || n.x > w) n.vx *= -1, n.x = Math.max(0, Math.min(w, n.x));
+          if (n.y < 0 || n.y > h) n.vy *= -1, n.y = Math.max(0, Math.min(h, n.y));
+        }
+
+        const thresh = connectThreshold();
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i], b = nodes[j];
+            const dx = a.x - b.x, dy = a.y - b.y;
+            const d2 = dx*dx + dy*dy;
+            if (d2 > thresh*thresh) continue;
+            const d = Math.sqrt(d2) || 1;
+            const t = 1 - (d / thresh);
+            ctx.strokeStyle = t > 0.75 ? ACCENT : BG_LINE;
+            ctx.lineWidth = 1 * (0.4 + 0.6 * t);
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i];
+          ctx.fillStyle = BG_NODE;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function tick() {
+        if (reduceMotion) { drawFrame(); return; }
+        drawFrame();
+        rafId = requestAnimationFrame(tick);
+      }
+      tick();
+      window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
+    })();
+  </script>
 </body>
 </html>
