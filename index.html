@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Kevin | AI Resume Assistant</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
@@ -129,7 +129,9 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1000;
     }
     #kc-chat-window {
-      position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px;
+      position: fixed;
+      bottom: 90px; right: 20px;
+      width: 320px; height: 400px;
       background: #fff; border: 1px solid #ccc; border-radius: 10px;
       display: none; flex-direction: column; overflow: hidden; z-index: 1001;
       transition: all 160ms ease;
@@ -140,12 +142,20 @@
     }
     #kc-messages {
       flex: 1; padding: 10px; overflow-y: auto; font-size: 0.9rem;
+      /* keep last messages visible above input */
+      scroll-padding-bottom: 84px;
     }
     .kc-badge { display: inline-block; background: #d9e9ff; color: #031B4E;
       padding: 3px 6px; border-radius: 6px; font-size: 0.75rem; margin: 2px; }
     #kc-badges { padding: 4px 8px; }
     #kc-role { margin-left: 8px; }
-    #kc-input-box { display: flex; border-top: 1px solid #ccc; }
+
+    /* Input row is sticky and padded for safe area */
+    #kc-input-box {
+      display: flex; border-top: 1px solid #ccc; background: #fff;
+      position: sticky; bottom: 0; z-index: 2;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
     #kc-input { flex: 1; border: none; padding: 10px; font-size: 0.9rem; }
     #kc-send { background: #0061EB; border: none; color: white; padding: 0 15px; cursor: pointer; }
 
@@ -154,18 +164,41 @@
       position: fixed; inset: 0; background: rgba(0,0,0,0.4);
       z-index: 1000; display: none;
     }
-    /* Centered modal state */
+
+    /* Centered modal state (desktop default) */
     #kc-chat-window.kc-modal {
       top: 50%; left: 50%; bottom: auto; right: auto;
       transform: translate(-50%, -50%);
       width: 50vw; height: 75vh;
       border-radius: 12px;
       box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
     }
+
+    /* ======= MOBILE: 15% top/bottom margin, 70% height, center horizontally ======= */
     @media (max-width: 768px) {
+      /* use dvh so it adapts to keyboard; fallback sequence: dvh -> svh -> vh */
       #kc-chat-window.kc-modal {
-        top: 0; left: 0; transform: none;
-        width: 100vw; height: 100vh; border-radius: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto; bottom: auto;
+        top: 15dvh;
+        height: 70dvh;
+        width: 94vw;
+        border-radius: 12px;
+      }
+
+      /* Older browsers: fallbacks */
+      @supports not (height: 70dvh) {
+        #kc-chat-window.kc-modal {
+          top: 15svh; height: 70svh;
+        }
+      }
+      @supports not (height: 70svh) {
+        #kc-chat-window.kc-modal {
+          top: 15vh; height: 70vh;
+        }
       }
     }
 
@@ -300,8 +333,8 @@
   </section>
 
   <section>
+    <h2>🧠 Key Skills</h2>
     <div class="responsive-table">
-      <h2>🧠 Key Skills</h2>
       <table>
         <tr><th>Category</th><th>Skills</th></tr>
         <tr><td>Machine Learning & AI</td><td>scikit-learn, XGBoost, LightGBM, NLP, GenAI, TensorFlow</td></tr>
@@ -313,8 +346,8 @@
   </section>
 
   <section>
+    <h2>Community Profile</h2>
     <div class="responsive-table">
-      <h2>Community Profile</h2>
       <table>
         <tr><th>Platform</th><th>Profile</th></tr>
         <tr><td>GitHub</td><td><a href="https://github.com/KevinChngJY" target="_blank" rel="noopener">github.com/KevinChngJY</a></td></tr>
@@ -427,6 +460,7 @@
       launcher.style.display = 'none';
       win.classList.add('kc-modal');
       if (overlay) overlay.style.display = 'block';
+      fitMobileModal(); // ensure correct 15/70 on entry
     }
     function exitModal() {
       if (!win) return;
@@ -489,7 +523,7 @@
 
       row.appendChild(bubble);
       msgs.appendChild(row);
-      msgs.scrollTop = msgs.scrollHeight;
+      scrollMessagesToBottom();
 
       if (role === 'bot' && window.hljs) {
         row.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
@@ -525,7 +559,14 @@
     document.getElementById('kc-messages').addEventListener('click', (e) => {
       if (e.target.closest('.kc-bubble')) enterModal();
     });
-    document.getElementById('kc-input').addEventListener('focus', enterModal);
+    document.getElementById('kc-input').addEventListener('focus', () => {
+      enterModal();
+      // Make sure input is visible when keyboard opens
+      setTimeout(() => {
+        input.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        scrollMessagesToBottom();
+      }, 30);
+    });
 
     // Typing indicator (bot row)
     let typingRow = null;
@@ -546,12 +587,16 @@
       typingRow.appendChild(bubble);
 
       msgs.appendChild(typingRow);
-      msgs.scrollTop = msgs.scrollHeight;
+      scrollMessagesToBottom();
     }
     function hideTyping() {
       if (!typingRow) return;
       try { msgs.removeChild(typingRow); } catch {}
       typingRow = null;
+    }
+
+    function scrollMessagesToBottom() {
+      msgs.scrollTop = msgs.scrollHeight;
     }
 
     // Send message
@@ -711,7 +756,40 @@
       tick();
       window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
     })();
+
+    /* ====== Keep mobile modal 15/70 visible with on-screen keyboard ====== */
+    function isSmallScreen() { return window.matchMedia('(max-width: 768px)').matches; }
+    function fitMobileModal() {
+      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
+      // Prefer CSS dvh; for browsers without dvh support, adjust with visualViewport
+      if (window.visualViewport) {
+        const vv = window.visualViewport;
+        // compute top/height from current visual viewport
+        const topPx = vv.height * 0.15 + vv.offsetTop;
+        const heightPx = vv.height * 0.70;
+        win.style.top = topPx + 'px';
+        win.style.height = heightPx + 'px';
+        win.style.left = (vv.width * 0.5 + vv.offsetLeft) + 'px';
+        win.style.transform = 'translateX(-50%)';
+        win.style.right = 'auto';
+        win.style.bottom = 'auto';
+      } else {
+        // fallback relies on CSS dvh/svh rules
+        win.style.removeProperty('top');
+        win.style.removeProperty('height');
+        win.style.removeProperty('left');
+        win.style.removeProperty('transform');
+      }
+      // maintain scroll to bottom so input is visible
+      scrollMessagesToBottom();
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', fitMobileModal);
+      window.visualViewport.addEventListener('scroll', fitMobileModal);
+    }
+    window.addEventListener('orientationchange', () => setTimeout(fitMobileModal, 200));
+    window.addEventListener('resize', () => setTimeout(fitMobileModal, 100));
   </script>
 </body>
 </html>
-
