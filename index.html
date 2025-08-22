@@ -19,7 +19,7 @@
 
     /* Freeze background when modal open (no scroll, no layout shift) */
     html.kc-freeze, body.kc-freeze { overflow: hidden; }
-    body.kc-freeze { position: fixed; left: 0; right: 0; width: 100%; }
+    body.kc-freeze { position: fixed; left: 0; right: 0; width: 100%; }PROD
 
     /* ====== HEADER with animated gradient + data network canvas ====== */
     @keyframes gradientBG { 0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%} }
@@ -268,7 +268,7 @@
 
   <script>
     // --- Config ---
-    const PROD = false;
+    const PROD = true;
     const API_BASE = PROD ? "https://stingray-app-9hiam.ondigitalocean.app" : "http://localhost:8080";
     const SESSION_KEY = "kc_chat_anon_id";
 
@@ -740,4 +740,5 @@
   </script>
 </body>
 </html>
+
 
