@@ -174,6 +174,7 @@
       box-shadow: 0 12px 28px rgba(0,0,0,0.25);
       display: flex;
       flex-direction: column;
+      transition: top 160ms ease, height 160ms ease;
     }
 
     /* ======= MOBILE: 15% top/bottom margin, 70% height, center horizontally ======= */
@@ -453,52 +454,7 @@
       avatarBox.style.display = on ? 'flex' : 'none';
     }
 
-    // --- Modal helpers ---
-    function enterModal() {
-      if (!win) return;
-      win.style.display = 'flex';
-      launcher.style.display = 'none';
-      win.classList.add('kc-modal');
-      if (overlay) overlay.style.display = 'block';
-      fitMobileModal(); // ensure correct 15/70 on entry
-    }
-    function exitModal() {
-      if (!win) return;
-      win.classList.remove('kc-modal');
-      if (overlay) overlay.style.display = 'none';
-    }
-
-    // Open chat centered immediately
-    launcher.addEventListener('click', () => {
-      win.style.display = 'flex';
-      launcher.style.display = 'none';
-      enterModal();
-      setAvatarVisible(false);
-      if (msgs.children.length === 0) addBot("Hello! I’m **Virtual Kevin**. Ask me about my portfolio, background, or projects.");
-    });
-
-    function closeChat() {
-      win.style.display = 'none';
-      launcher.style.display = 'inline-block';
-      exitModal();
-      setAvatarVisible(true);
-    }
-    closeBtn.addEventListener('click', closeChat);
-    overlay.addEventListener('click', exitModal);
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
-
-    // New chat
-    newBtn.addEventListener('click', async () => {
-      resetSessionId();
-      updateSessionBadge();
-      msgs.innerHTML = "";
-      badges.innerHTML = "";
-      clearRole();
-      addBot("Started a new conversation. How can I help?");
-      enterModal();
-    });
-
-    // Messages (Markdown for bot, plain text for user)
+    // --- Messages helpers ---
     function addMsg(role, text) {
       const row = document.createElement('div');
       row.className = `kc-msg ${role}`;
@@ -532,6 +488,15 @@
     const addUser = (t) => addMsg('user', t);
     const addBot  = (t) => addMsg('bot', t);
 
+    function hasAnyMessage() {
+      return !!msgs.querySelector('.kc-msg');
+    }
+    function ensureGreeting() {
+      if (!hasAnyMessage()) {
+        addBot("Hello! I’m **Virtual Kevin**. Ask me about my portfolio, background, or projects.");
+      }
+    }
+
     function showRole(role) {
       if (!roleBadge) return;
       if (!role) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; return; }
@@ -554,6 +519,53 @@
         badges.appendChild(tag);
       });
     }
+
+    function scrollMessagesToBottom() {
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    // --- Modal helpers ---
+    function enterModal() {
+      if (!win) return;
+      win.style.display = 'flex';
+      launcher.style.display = 'none';
+      win.classList.add('kc-modal');
+      if (overlay) overlay.style.display = 'block';
+      fitMobileModal(); // wrapper that uses applyKeyboardLayout / resetMobileModalInlineStyles
+    }
+    function exitModal() {
+      if (!win) return;
+      win.classList.remove('kc-modal');
+      if (overlay) overlay.style.display = 'none';
+    }
+
+    // Open chat
+    launcher.addEventListener('click', () => {
+      ensureGreeting();          // guarantee greeting even if later code throws
+      enterModal();
+      setAvatarVisible(false);
+    });
+
+    function closeChat() {
+      win.style.display = 'none';
+      launcher.style.display = 'inline-block';
+      exitModal();
+      setAvatarVisible(true);
+    }
+    closeBtn.addEventListener('click', closeChat);
+    overlay.addEventListener('click', exitModal);
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
+
+    // New chat
+    newBtn.addEventListener('click', async () => {
+      resetSessionId();
+      updateSessionBadge();
+      msgs.innerHTML = "";
+      badges.innerHTML = "";
+      clearRole();
+      ensureGreeting();
+      enterModal();
+    });
 
     // Clicking message or focusing input keeps it centered
     document.getElementById('kc-messages').addEventListener('click', (e) => {
@@ -593,10 +605,6 @@
       if (!typingRow) return;
       try { msgs.removeChild(typingRow); } catch {}
       typingRow = null;
-    }
-
-    function scrollMessagesToBottom() {
-      msgs.scrollTop = msgs.scrollHeight;
     }
 
     // Send message
@@ -757,39 +765,98 @@
       window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
     })();
 
-    /* ====== Keep mobile modal 15/70 visible with on-screen keyboard ====== */
+    /* ====== Mobile modal sizing vs on-screen keyboard ====== */
     function isSmallScreen() { return window.matchMedia('(max-width: 768px)').matches; }
-    function fitMobileModal() {
-      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
-      // Prefer CSS dvh; for browsers without dvh support, adjust with visualViewport
-      if (window.visualViewport) {
-        const vv = window.visualViewport;
-        // compute top/height from current visual viewport
-        const topPx = vv.height * 0.15 + vv.offsetTop;
-        const heightPx = vv.height * 0.70;
-        win.style.top = topPx + 'px';
-        win.style.height = heightPx + 'px';
-        win.style.left = (vv.width * 0.5 + vv.offsetLeft) + 'px';
-        win.style.transform = 'translateX(-50%)';
-        win.style.right = 'auto';
-        win.style.bottom = 'auto';
-      } else {
-        // fallback relies on CSS dvh/svh rules
-        win.style.removeProperty('top');
-        win.style.removeProperty('height');
-        win.style.removeProperty('left');
-        win.style.removeProperty('transform');
-      }
-      // maintain scroll to bottom so input is visible
+
+    // Heuristic: when viewport shrinks notably vs layout viewport, keyboard is open
+    function isKeyboardOpen() {
+      if (!window.visualViewport) return false;
+      const ratio = window.visualViewport.height / window.innerHeight;
+      return ratio < 0.92; // tweak threshold if needed (0.90–0.95)
+    }
+
+    function applyKeyboardLayout() {
+      if (!isSmallScreen() || !win.classList.contains('kc-modal') || !window.visualViewport) return;
+      const vv = window.visualViewport;
+      // Pixel-fit to the current *visual* viewport
+      const topPx    = vv.height * 0.15 + vv.offsetTop;
+      const heightPx = vv.height * 0.70;
+
+      win.style.top = topPx + 'px';
+      win.style.height = heightPx + 'px';
+      win.style.left = (vv.width * 0.5 + vv.offsetLeft) + 'px';
+      win.style.transform = 'translateX(-50%)';
+      win.style.right = 'auto';
+      win.style.bottom = 'auto';
+
+      // Keep the latest message & input visible
       scrollMessagesToBottom();
     }
 
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', fitMobileModal);
-      window.visualViewport.addEventListener('scroll', fitMobileModal);
+    function resetMobileModalInlineStyles() {
+      // Clear inline overrides so CSS (15dvh / 70dvh) re-applies
+      win.style.removeProperty('top');
+      win.style.removeProperty('height');
+      win.style.removeProperty('left');
+      win.style.removeProperty('transform');
+      win.style.removeProperty('right');
+      win.style.removeProperty('bottom');
     }
-    window.addEventListener('orientationchange', () => setTimeout(fitMobileModal, 200));
-    window.addEventListener('resize', () => setTimeout(fitMobileModal, 100));
+
+    // Wrapper used on open; avoids ReferenceError and chooses best layout
+    function fitMobileModal() {
+      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
+      if (isKeyboardOpen()) {
+        applyKeyboardLayout();
+      } else {
+        resetMobileModalInlineStyles();
+      }
+    }
+
+    // Debounced handler to switch between the two modes
+    let vvDebounce;
+    function onVisualViewportChange() {
+      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
+      clearTimeout(vvDebounce);
+      vvDebounce = setTimeout(() => {
+        if (isKeyboardOpen()) {
+          applyKeyboardLayout();
+        } else {
+          resetMobileModalInlineStyles();
+        }
+      }, 50);
+    }
+
+    // Wire up listeners (if supported)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onVisualViewportChange);
+      window.visualViewport.addEventListener('scroll', onVisualViewportChange);
+    }
+    window.addEventListener('orientationchange', () => setTimeout(() => {
+      // After rotation, restore default CSS sizing
+      resetMobileModalInlineStyles();
+    }, 250));
+    window.addEventListener('resize', () => {
+      // Desktop/tablet resizes—if keyboard not open, restore defaults
+      if (!isKeyboardOpen()) resetMobileModalInlineStyles();
+    });
+
+    // Ensure we restore default when chat is closed
+    const _origCloseChat = closeChat;
+    window.closeChat = function() {
+      resetMobileModalInlineStyles();
+      _origCloseChat();
+    };
+
+    // Also restore when overlay is clicked (modal dismissed)
+    overlay.addEventListener('click', () => {
+      resetMobileModalInlineStyles();
+    });
+
+    // If input loses focus (keyboard hides), restore after a tick
+    input.addEventListener('blur', () => setTimeout(() => {
+      if (!isKeyboardOpen()) resetMobileModalInlineStyles();
+    }, 80));
   </script>
 </body>
 </html>
