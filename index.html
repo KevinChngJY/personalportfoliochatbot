@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
+    :root { color-scheme: light; }
     body {
       font-family: 'Roboto', sans-serif;
       margin: 0;
@@ -14,6 +15,10 @@
       background: #f7f9fc;
       color: #031B4E;
     }
+
+    /* Freeze page when modal is open (no scroll, no layout shift) */
+    html.kc-freeze, body.kc-freeze { overflow: hidden; }
+    body.kc-freeze { position: fixed; width: 100%; }
 
     /* ====== HEADER with animated gradient + data network canvas ====== */
     @keyframes gradientBG {
@@ -53,9 +58,7 @@
       .ds-hero-copy h1 { font-size: 2.6rem; }
       .ds-hero-copy p { font-size: 1.2rem; }
     }
-    @media (prefers-reduced-motion: reduce) {
-      .ds-hero { animation: none; }
-    }
+    @media (prefers-reduced-motion: reduce) { .ds-hero { animation: none; } }
 
     .intro-note {
       text-align: center;
@@ -84,13 +87,7 @@
     tr:hover { background-color: #f0f4ff; }
     a { color: #0061EB; text-decoration: none; }
 
-    footer {
-      background: #E5E8ED;
-      text-align: center;
-      padding: 20px;
-      margin-top: 40px;
-      font-size: 0.9rem;
-    }
+    footer { background: #E5E8ED; text-align: center; padding: 20px; margin-top: 40px; font-size: 0.9rem; }
 
     #avatar-status {
       position: fixed;
@@ -158,25 +155,24 @@
     #kc-input { flex: 1; border: none; padding: 10px; font-size: 0.9rem; }
     #kc-send { background: #0061EB; border: none; color: white; padding: 0 15px; cursor: pointer; }
 
-    /* Overlay for centered modal */
+    /* Overlay */
     #kc-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.4);
       z-index: 1000; display: none;
     }
 
-    /* Centered modal state (desktop default) */
+    /* Centered modal (desktop) */
     #kc-chat-window.kc-modal {
       top: 50%; left: 50%; bottom: auto; right: auto;
       transform: translate(-50%, -50%);
       width: 50vw; height: 75vh;
       border-radius: 12px;
       box-shadow: 0 12px 28px rgba(0,0,0,0.25);
-      display: flex;
-      flex-direction: column;
+      display: flex; flex-direction: column;
       transition: top 160ms ease, height 160ms ease;
     }
 
-    /* ======= MOBILE: 15% top/bottom margin, 70% height, center horizontally ======= */
+    /* Mobile: 15% top/bottom, 70% height, centered */
     @media (max-width: 768px) {
       #kc-chat-window.kc-modal {
         left: 50%;
@@ -197,10 +193,7 @@
 
     /* Messages + avatar */
     .kc-msg { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
-    .kc-bubble {
-      display: inline-block; padding: 8px 12px; border-radius: 10px;
-      max-width: 80%;
-    }
+    .kc-bubble { display: inline-block; padding: 8px 12px; border-radius: 10px; max-width: 80%; }
     .kc-msg.user { justify-content: flex-end; }
     .kc-msg.user .kc-bubble { order: 2; background: #0061EB; color: #fff; }
     .kc-msg.bot .kc-bubble { background: #E5E8ED; color: #000; }
@@ -225,6 +218,7 @@
     .kc-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes kc-blink { 0%,80%,100% {opacity:.2;transform:translateY(0)} 40% {opacity:1;transform:translateY(-1px)} }
 
+    /* Markdown polish */
     .kc-bubble h1, .kc-bubble h2, .kc-bubble h3 { margin: 0.4em 0 0.2em; }
     .kc-bubble p { margin: 0.4em 0; }
     .kc-bubble ul, .kc-bubble ol { margin: 0.4em 0 0.4em 1.2em; }
@@ -236,12 +230,14 @@
     .kc-bubble { overflow-x: auto; }
   </style>
 
+  <!-- Markdown parser + sanitizer + code highlight -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
   <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
 </head>
 <body>
+  <!-- HEADER with animated canvas -->
   <header class="ds-hero">
     <canvas id="ds-bg" aria-hidden="true"></canvas>
     <div class="ds-hero-copy">
@@ -347,15 +343,20 @@
     </div>
   </section>
 
+  <!-- Avatar status -->
   <div id="avatar-status">
     <img id="avatar-img" src="https://media.giphy.com/media/xTk9ZvMnbIiIew7IpW/giphy.gif" alt="Loading assistant..." />
     <span id="avatar-text">Loading assistant...</span>
   </div>
 
+  <!-- Chat Launcher -->
   <button id="kc-chat-launcher" aria-label="Open chat">💬</button>
-  <div id="kc-overlay"></div>
 
-  <div id="kc-chat-window" role="dialog" aria-label="Virtual Kevin chat">
+  <!-- Modal overlay -->
+  <div id="kc-overlay" aria-hidden="true"></div>
+
+  <!-- Chat Window -->
+  <div id="kc-chat-window" role="dialog" aria-label="Virtual Kevin chat" aria-modal="true">
     <div id="kc-header">
       <span>Virtual Kevin</span>
       <div>
@@ -373,6 +374,7 @@
     </div>
   </div>
 
+  <!-- Markdown & Chat Logic -->
   <script>
     // --- Config ---
     const PROD = false;
@@ -425,15 +427,11 @@
     }
     updateSessionBadge();
 
-    // Avatar status tweak
     setTimeout(() => {
       document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
       document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
     }, 3000);
-    function setAvatarVisible(on) {
-      if (!avatarBox) return;
-      avatarBox.style.display = on ? 'flex' : 'none';
-    }
+    function setAvatarVisible(on) { if (avatarBox) avatarBox.style.display = on ? 'flex' : 'none'; }
 
     // --- Messages helpers ---
     function addMsg(role, text) {
@@ -483,11 +481,7 @@
       roleBadge.textContent = `Role: ${label}`;
       roleBadge.style.display = 'inline-block';
     }
-    function clearRole() {
-      if (!roleBadge) return;
-      roleBadge.style.display = 'none';
-      roleBadge.textContent = '';
-    }
+    function clearRole() { if (roleBadge) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; } }
     function showCompanies(companies) {
       badges.innerHTML = '';
       if (!companies || !companies.length) return;
@@ -498,17 +492,107 @@
         badges.appendChild(tag);
       });
     }
-
     function scrollMessagesToBottom() { msgs.scrollTop = msgs.scrollHeight; }
+
+    // --- Freeze / unfreeze page behind modal (no layout shift) ---
+    let pageScrollY = 0;
+    function freezePage() {
+      pageScrollY = window.scrollY || window.pageYOffset || 0;
+      const sbw = window.innerWidth - document.documentElement.clientWidth; // scrollbar width
+      document.documentElement.classList.add('kc-freeze');
+      document.body.classList.add('kc-freeze');
+      document.body.style.top = `-${pageScrollY}px`;
+      if (sbw > 0) document.body.style.paddingRight = sbw + 'px';
+    }
+    function unfreezePage() {
+      document.documentElement.classList.remove('kc-freeze');
+      document.body.classList.remove('kc-freeze');
+      document.body.style.top = '';
+      document.body.style.paddingRight = '';
+      window.scrollTo(0, pageScrollY);
+    }
+
+    // --- Baseline sizing (restore after keyboard closes) ---
+    let baseline = null; // { topPx, heightPx }
+    function captureBaseline(force=false) {
+      if (baseline && !force) return;
+      const cs = getComputedStyle(win);
+      baseline = {
+        topPx: parseFloat(cs.top) || 0,
+        heightPx: parseFloat(cs.height) || 0
+      };
+    }
+    function restoreToBaseline() {
+      if (!baseline) { resetMobileModalInlineStyles(); return; }
+      // Set explicit px to avoid any transient dvh inconsistencies
+      win.style.top = baseline.topPx + 'px';
+      win.style.height = baseline.heightPx + 'px';
+      // Return to centered X positioning
+      win.style.left = '50%';
+      win.style.transform = 'translateX(-50%)';
+      win.style.right = 'auto';
+      win.style.bottom = 'auto';
+      scrollMessagesToBottom();
+    }
+
+    // --- Keyboard-aware mobile layout ---
+    function isSmallScreen() { return window.matchMedia('(max-width: 768px)').matches; }
+    function isKeyboardOpen() {
+      if (!window.visualViewport) return false;
+      const ratio = window.visualViewport.height / window.innerHeight;
+      return ratio < 0.92;
+    }
+    function applyKeyboardLayout() {
+      if (!isSmallScreen() || !win.classList.contains('kc-modal') || !window.visualViewport) return;
+      const vv = window.visualViewport;
+      const topPx    = vv.height * 0.15 + vv.offsetTop;
+      const heightPx = vv.height * 0.70;
+
+      win.style.top = topPx + 'px';
+      win.style.height = heightPx + 'px';
+      win.style.left = (vv.width * 0.5 + vv.offsetLeft) + 'px';
+      win.style.transform = 'translateX(-50%)';
+      win.style.right = 'auto';
+      win.style.bottom = 'auto';
+      scrollMessagesToBottom();
+    }
+    function resetMobileModalInlineStyles() {
+      win.style.removeProperty('top');
+      win.style.removeProperty('height');
+      win.style.removeProperty('left');
+      win.style.removeProperty('transform');
+      win.style.removeProperty('right');
+      win.style.removeProperty('bottom');
+    }
+    function fitMobileModal() {
+      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
+      if (isKeyboardOpen()) applyKeyboardLayout();
+      else restoreToBaseline();
+    }
+
+    // Track keyboard state to guard overlay clicks
+    let kbOpen = false;
+    function setKbOpenState(nowOpen) {
+      if (kbOpen === nowOpen) return;
+      kbOpen = nowOpen;
+      if (!kbOpen) {
+        // Just closed: ignore overlay taps briefly and snap back to baseline
+        overlay.dataset.justClosedKeyboard = '1';
+        restoreToBaseline();
+        setTimeout(() => { delete overlay.dataset.justClosedKeyboard; }, 350);
+      }
+    }
 
     // --- Modal helpers ---
     function enterModal() {
+      // show UI bits
       win.style.display = 'flex';
       launcher.style.display = 'none';
       win.classList.add('kc-modal');
       overlay.style.display = 'block';
+      freezePage();
 
-      // Capture baseline once modal is visible and keyboard is not open
+      // Capture baseline once visible & keyboard not open
       requestAnimationFrame(() => {
         if (!isKeyboardOpen()) captureBaseline(true);
         fitMobileModal();
@@ -517,10 +601,12 @@
     function exitModal() {
       win.classList.remove('kc-modal');
       overlay.style.display = 'none';
+      unfreezePage();
     }
 
+    // Open chat
     launcher.addEventListener('click', () => {
-      ensureGreeting();
+      ensureGreeting();          // guaranteed greeting
       enterModal();
       setAvatarVisible(false);
     });
@@ -532,15 +618,21 @@
       setAvatarVisible(true);
     }
     closeBtn.addEventListener('click', closeChat);
-    overlay.addEventListener('click', () => {
-      // If tapping outside, restore baseline first (prevents odd sizes when reopening)
-      restoreToBaseline();
-      exitModal();
-      win.style.display = 'none';
-      launcher.style.display = 'inline-block';
-      setAvatarVisible(true);
+
+    // Guarded overlay click: don't close if keyboard open / just closed
+    overlay.addEventListener('click', (e) => {
+      if (isSmallScreen() && (kbOpen || overlay.dataset.justClosedKeyboard === '1')) {
+        e.preventDefault();
+        e.stopPropagation();
+        restoreToBaseline();
+        return;
+      }
+      closeChat();
     });
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && win.style.display !== 'none') closeChat();
+    });
 
     // New chat
     newBtn.addEventListener('click', async () => {
@@ -553,6 +645,7 @@
       enterModal();
     });
 
+    // Clicking message or focusing input keeps it centered
     document.getElementById('kc-messages').addEventListener('click', (e) => {
       if (e.target.closest('.kc-bubble')) enterModal();
     });
@@ -564,7 +657,7 @@
       }, 30);
     });
 
-    // Typing indicator
+    // Typing indicator (bot row)
     let typingRow = null;
     function showTyping() {
       if (typingRow) return;
@@ -633,6 +726,7 @@
         addBot("**Network error.** Please try again.");
       }
     }
+
     sendBtn.addEventListener('click', sendMessage);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
@@ -665,10 +759,8 @@
       function spawnNodes(n) {
         for (let i = 0; i < n; i++) {
           nodes.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: (Math.random() - 0.5) * 0.5,
+            x: Math.random() * w, y: Math.random() * h,
+            vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
             r: 1.2 + Math.random() * 1.8
           });
         }
@@ -739,133 +831,38 @@
         }
       }
 
-      function tick() {
-        if (reduceMotion) { drawFrame(); return; }
-        drawFrame();
-        rafId = requestAnimationFrame(tick);
-      }
+      function tick() { if (!reduceMotion) { drawFrame(); rafId = requestAnimationFrame(tick); } else { drawFrame(); } }
       tick();
       window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
     })();
 
-    /* ====== Mobile modal sizing vs keyboard: capture baseline + restore ====== */
-    function isSmallScreen() { return window.matchMedia('(max-width: 768px)').matches; }
-    function isKeyboardOpen() {
-      if (!window.visualViewport) return false;
-      const ratio = window.visualViewport.height / window.innerHeight;
-      return ratio < 0.92;
-    }
-
-    // Baseline position/size captured when the modal opens (keyboard closed)
-    let modalBaseline = null; // { top, height }
-
-    function captureBaseline(force=false) {
-      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
-      if (isKeyboardOpen() && !force) return;
-
-      const h = window.innerHeight; // layout viewport when keyboard is closed
-      const topPx = Math.round(h * 0.15);
-      const heightPx = Math.round(h * 0.70);
-      modalBaseline = { top: topPx, height: heightPx };
-
-      // Lock baseline to pixel values (avoids iOS dvh quirks on reopen)
-      win.style.top = topPx + 'px';
-      win.style.height = heightPx + 'px';
-      win.style.left = '50%';
-      win.style.transform = 'translateX(-50%)';
-      win.style.right = 'auto';
-      win.style.bottom = 'auto';
-    }
-
-    function restoreToBaseline() {
-      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
-      if (modalBaseline) {
-        win.style.top = modalBaseline.top + 'px';
-        win.style.height = modalBaseline.height + 'px';
-        win.style.left = '50%';
-        win.style.transform = 'translateX(-50%)';
-        win.style.right = 'auto';
-        win.style.bottom = 'auto';
-      } else {
-        // Fallback: clear inline to let CSS take over
-        resetMobileModalInlineStyles();
-      }
-    }
-
-    function applyKeyboardLayout() {
-      if (!isSmallScreen() || !win.classList.contains('kc-modal') || !window.visualViewport) return;
-      const vv = window.visualViewport;
-      const topPx    = vv.height * 0.15 + vv.offsetTop;
-      const heightPx = vv.height * 0.70;
-
-      win.style.top = topPx + 'px';
-      win.style.height = heightPx + 'px';
-      win.style.left = (vv.width * 0.5 + vv.offsetLeft) + 'px';
-      win.style.transform = 'translateX(-50%)';
-      win.style.right = 'auto';
-      win.style.bottom = 'auto';
-
-      scrollMessagesToBottom();
-    }
-
-    function resetMobileModalInlineStyles() {
-      win.style.removeProperty('top');
-      win.style.removeProperty('height');
-      win.style.removeProperty('left');
-      win.style.removeProperty('transform');
-      win.style.removeProperty('right');
-      win.style.removeProperty('bottom');
-    }
-
-    function fitMobileModal() {
-      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
-      if (isKeyboardOpen()) {
-        applyKeyboardLayout();
-      } else {
-        if (!modalBaseline) captureBaseline();
-        restoreToBaseline();
-      }
-    }
-
-    // Debounced viewport change handler
+    // ====== VisualViewport listeners ======
     let vvDebounce;
     function onVisualViewportChange() {
       if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
       clearTimeout(vvDebounce);
       vvDebounce = setTimeout(() => {
-        if (isKeyboardOpen()) {
-          applyKeyboardLayout();
-        } else {
-          // Keyboard just closed — go back to the exact baseline
-          restoreToBaseline();
-        }
+        const nowOpen = isKeyboardOpen();
+        setKbOpenState(nowOpen);
+        if (nowOpen) applyKeyboardLayout();
+        else restoreToBaseline();
       }, 50);
     }
-
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', onVisualViewportChange);
       window.visualViewport.addEventListener('scroll', onVisualViewportChange);
     }
+    window.addEventListener('orientationchange', () => setTimeout(() => { restoreToBaseline(); }, 250));
+    window.addEventListener('resize', () => { if (!isKeyboardOpen()) restoreToBaseline(); });
 
-    window.addEventListener('orientationchange', () => {
-      setTimeout(() => {
-        // Recompute a fresh baseline after rotation (keyboard closed)
-        if (!isKeyboardOpen() && win.classList.contains('kc-modal')) {
-          captureBaseline(true);
-          restoreToBaseline();
-        }
-      }, 250);
-    });
+    // Restore default when chat is closed (and keep scroll position)
+    const _origCloseChat = closeChat;
+    window.closeChat = function() {
+      restoreToBaseline();
+      _origCloseChat();
+    };
 
-    window.addEventListener('resize', () => {
-      // Desktop/tablet resizes — if keyboard not open, keep baseline accurate
-      if (!isKeyboardOpen() && win.classList.contains('kc-modal')) {
-        captureBaseline(true);
-        restoreToBaseline();
-      }
-    });
-
-    // If input loses focus (keyboard hides), restore baseline shortly after
+    // If input loses focus (keyboard hides), restore after a tick
     input.addEventListener('blur', () => setTimeout(() => {
       if (!isKeyboardOpen()) restoreToBaseline();
     }, 80));
