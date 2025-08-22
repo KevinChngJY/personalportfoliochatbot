@@ -77,9 +77,43 @@
     #kc-role{margin-left:8px}
 
     /* Sticky input; 16px font to avoid iOS auto-zoom */
-    #kc-input-box{display:flex;border-top:1px solid #ccc;background:#fff;position:sticky;bottom:0;z-index:2;padding-bottom:max(8px, env(safe-area-inset-bottom))}
-    #kc-input{flex:1;border:none;padding:10px;font-size:16px;line-height:1.4}
-    #kc-send{background:#0061EB;border:none;color:#fff;padding:0 15px;font-size:16px;cursor:pointer}
+    /* Make the whole typing bar a pill */
+    #kc-input-box {
+      position: sticky; bottom: 0; z-index: 2;
+      display: flex; align-items: center; gap: 8px;
+    
+      /* pill look */
+      margin: 8px; /* space from chat window edges so curves are visible */
+      padding: 8px;
+      background: #f3f6fb;
+      border: 1px solid #dbe2ea;
+      border-radius: 9999px;
+    
+      /* mobile safe-area */
+      margin-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    
+    /* Input becomes transparent inside the pill */
+    #kc-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 10px 12px;
+      font-size: 16px; /* avoids iOS zoom */
+      line-height: 1.4;
+      outline: none;
+    }
+    
+    /* Round send button too (mini pill / circle) */
+    #kc-send {
+      background: #0061EB;
+      border: none;
+      color: #fff;
+      padding: 10px 14px;       /* keep "Send" text comfy; use width/height 40px for an icon */
+      border-radius: 9999px;    /* fully rounded button */
+      cursor: pointer;
+      line-height: 1;
+    }
 
     /* Overlay (also blocks any background gestures) */
     #kc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;touch-action:none}
@@ -740,5 +774,6 @@
   </script>
 </body>
 </html>
+
 
 
