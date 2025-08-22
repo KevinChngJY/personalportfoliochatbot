@@ -19,7 +19,7 @@
 
     /* Freeze background when modal open (no scroll, no layout shift) */
     html.kc-freeze, body.kc-freeze { overflow: hidden; }
-    body.kc-freeze { position: fixed; left: 0; right: 0; width: 100%; }PROD
+    body.kc-freeze { position: fixed; left: 0; right: 0; width: 100%; }
 
     /* ====== HEADER with animated gradient + data network canvas ====== */
     @keyframes gradientBG { 0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%} }
@@ -155,6 +155,47 @@
     .kc-bubble p{margin:.4em 0}
     .kc-bubble ul,.kc-bubble ol{margin:.4em 0 .4em 1.2em}
     .kc-bubble pre{overflow:auto;padding:8px;border-radius:6px}
+
+    /* ===== Auto-close overlay (inside the chat window) ===== */
+    #kc-autoclose {
+      position: absolute;
+      inset: 0;
+      display: none;             /* shown via JS */
+      align-items: center;
+      justify-content: center;
+      background: rgba(3,27,78,0.55);
+      backdrop-filter: blur(2px);
+      z-index: 9999;             /* above everything in chat */
+    }
+
+    .kc-ac-card {
+      width: min(90%, 320px);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+      padding: 20px 18px;
+      text-align: center;
+    }
+
+    .kc-ac-icon {
+      width: 42px; height: 42px; margin: 0 auto 10px;
+      border-radius: 9999px; background: #eef3ff;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .kc-ac-title { font-weight: 700; color: #031B4E; margin-bottom: 4px; }
+    .kc-ac-sub   { font-size: 0.92rem; color: #4a5b7a; margin-bottom: 12px; }
+    .kc-ac-count { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+
+    .kc-ac-progress {
+      height: 6px; background:#e8eef7; border-radius: 9999px; overflow: hidden;
+    }
+    .kc-ac-progress > span {
+      display:block; height:100%; background:#0061EB; width:100%;
+    }
+
+    @keyframes kcShrink { from { width:100%; } to { width:0%; } }
+
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -301,43 +342,47 @@
   </div>
 
   <script>
-    // --- Config ---
-    const PROD = true;
-    const API_BASE = PROD ? "https://stingray-app-9hiam.ondigitalocean.app" : "http://localhost:8080";
-    const SESSION_KEY = "kc_chat_anon_id";
+  // --- Config ---
+  const PROD = true;
+  const API_BASE = PROD ? "https://stingray-app-9hiam.ondigitalocean.app" : "http://localhost:8080";
+  const SESSION_KEY = "kc_chat_anon_id";
 
-    // --- Session management ---
-    function getSessionId() {
-      let id = localStorage.getItem(SESSION_KEY);
-      if (!id) {
-        id = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
-        localStorage.setItem(SESSION_KEY, id);
-      }
-      return id;
+  // --- Session management ---
+  function getSessionId() {
+    let id = localStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
+      localStorage.setItem(SESSION_KEY, id);
     }
-    function resetSessionId() {
-      const old = localStorage.getItem(SESSION_KEY);
-      localStorage.removeItem(SESSION_KEY);
-      const fresh = getSessionId();
-      return { old, fresh };
-    }
+    return id;
+  }
+  function resetSessionId() {
+    const old = localStorage.getItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
+    const fresh = getSessionId();
+    return { old, fresh };
+  }
 
-    // --- DOM refs ---
-    const launcher = document.getElementById('kc-chat-launcher');
-    const win = document.getElementById('kc-chat-window');
-    const overlay = document.getElementById('kc-overlay');
-    const closeBtn = document.getElementById('kc-close');
-    const newBtn = document.getElementById('kc-new');
-    const msgs = document.getElementById('kc-messages');
-    const input = document.getElementById('kc-input');
-    const sendBtn = document.getElementById('kc-send');
-    const badges = document.getElementById('kc-badges');
-    const avatarBox = document.getElementById('avatar-status');
-    const sessionBadge = document.getElementById('kc-session');
-    const roleBadge = document.getElementById('kc-role');
+  // --- DOM refs ---
+  const launcher = document.getElementById('kc-chat-launcher');
+  const win = document.getElementById('kc-chat-window');
+  const overlay = document.getElementById('kc-overlay');
+  const closeBtn = document.getElementById('kc-close');
+  const newBtn = document.getElementById('kc-new');
+  const msgs = document.getElementById('kc-messages');
+  const input = document.getElementById('kc-input');
+  const sendBtn = document.getElementById('kc-send');
+  const badges = document.getElementById('kc-badges');
+  const avatarBox = document.getElementById('avatar-status');
+  const sessionBadge = document.getElementById('kc-session');
+  const roleBadge = document.getElementById('kc-role');
 
-    // Bot icon (inline SVG)
-    const BOT_ICON = `
+  // Helpers
+  const isSmallScreen = () => window.matchMedia('(max-width: 768px)').matches;
+  const hasVV = () => !!window.visualViewport;
+
+  // Bot icon (inline SVG)
+  const BOT_ICON = `
     <svg viewBox="0 0 24 24" fill="none"
         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
         aria-hidden="true" focusable="false">
@@ -347,433 +392,621 @@
       <path d="M6 20h12"></path>
     </svg>`;
 
-    // Show current session id
-    function updateSessionBadge() {
-      if (sessionBadge) sessionBadge.textContent = `sid: ${getSessionId()}`;
+  // Show current session id
+  function updateSessionBadge() {
+    if (sessionBadge) sessionBadge.textContent = `sid: ${getSessionId()}`;
+  }
+  updateSessionBadge();
+
+  // Avatar status tweak
+  setTimeout(() => {
+    document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
+    document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
+  }, 3000);
+  function setAvatarVisible(on) {
+    if (!avatarBox) return;
+    avatarBox.style.display = on ? 'flex' : 'none';
+  }
+
+  // --- Message helpers ---
+  function addMsg(role, text) {
+    const row = document.createElement('div');
+    row.className = `kc-msg ${role}`;
+
+    if (role === 'bot') {
+      const avatar = document.createElement('div');
+      avatar.className = 'kc-avatar';
+      avatar.innerHTML = BOT_ICON;
+      avatar.title = 'Virtual Kevin';
+      row.appendChild(avatar);
     }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'kc-bubble';
+
+    if (role === 'bot') {
+      const html = DOMPurify.sanitize(marked.parse(text || ''));
+      bubble.innerHTML = html;
+    } else {
+      bubble.textContent = text;
+    }
+
+    row.appendChild(bubble);
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    if (role === 'bot' && window.hljs) {
+      row.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+    }
+  }
+  const addUser = (t) => addMsg('user', t);
+  const addBot  = (t) => addMsg('bot', t);
+
+  function hasAnyMessage() { return !!msgs.querySelector('.kc-msg'); }
+  function ensureGreeting() {
+    if (!hasAnyMessage()) addBot("Hello! I’m **Virtual Kevin**. Ask me about my portfolio, background, or projects.");
+  }
+
+  function showRole(role) {
+    if (!roleBadge) return;
+    if (!role) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; return; }
+    const label = role === 'recruiter_interviewer' ? 'Recruiter/Interviewer' : 'General';
+    roleBadge.textContent = `Role: ${label}`;
+    roleBadge.style.display = 'inline-block';
+  }
+  function clearRole() { if (!roleBadge) return; roleBadge.style.display = 'none'; roleBadge.textContent = ''; }
+  function showCompanies(companies) {
+    badges.innerHTML = '';
+    if (!companies || !companies.length) return;
+    companies.slice(0, 3).forEach(c => {
+      const tag = document.createElement('span');
+      tag.className = 'kc-badge';
+      tag.textContent = c.name;
+      badges.appendChild(tag);
+    });
+  }
+
+  const scrollMessagesToBottom = () => { msgs.scrollTop = msgs.scrollHeight; };
+
+  // --- Freeze background (robust) ---
+  let pageScrollY = 0;
+  let _prevHtmlOverflow = '';
+  let _prevBodyPosition = '';
+  let _prevBodyWidth = '';
+  function freezePage() {
+    pageScrollY = window.scrollY || 0;
+    _prevHtmlOverflow = document.documentElement.style.overflow;
+    _prevBodyPosition = document.body.style.position;
+    _prevBodyWidth    = document.body.style.width;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${pageScrollY}px`;
+    const sbw = window.innerWidth - document.documentElement.clientWidth;
+    if (sbw > 0) document.body.style.paddingRight = sbw + 'px';
+  }
+  function unfreezePage() {
+    document.documentElement.style.overflow = _prevHtmlOverflow || '';
+    document.body.style.position = _prevBodyPosition || '';
+    document.body.style.width    = _prevBodyWidth || '';
+    document.body.style.top = '';
+    document.body.style.paddingRight = '';
+    window.scrollTo(0, pageScrollY);
+  }
+
+  // --- Mobile-only baseline/keyboard helpers ---
+  let baseline = null; // { topPx, heightPx }
+  function captureBaseline(force=false){
+    if (baseline && !force) return;
+    const cs = getComputedStyle(win);
+    baseline = { topPx: parseFloat(cs.top)||0, heightPx: parseFloat(cs.height)||0 };
+  }
+  function restoreToBaseline(){
+    // Only meaningful on mobile; skip on desktop to avoid jumps
+    if (!isSmallScreen()) return;
+    if (!baseline){
+      resetInlineModalStyles();
+      return;
+    }
+    win.style.top = baseline.topPx + 'px';
+    win.style.height = baseline.heightPx + 'px';
+    win.style.left = '50%';
+    win.style.transform = 'translateX(-50%)';
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    scrollMessagesToBottom();
+  }
+  function resetInlineModalStyles(){
+    win.style.removeProperty('top');
+    win.style.removeProperty('height');
+    win.style.removeProperty('left');
+    win.style.removeProperty('transform');
+    win.style.removeProperty('right');
+    win.style.removeProperty('bottom');
+  }
+
+  function isKeyboardOpen(){
+    if (!hasVV()) return false;
+    const ratio = window.visualViewport.height / window.innerHeight;
+    return ratio < 0.92;
+  }
+  function applyKeyboardLayout(){
+    if (!isSmallScreen() || !win.classList.contains('kc-modal') || !hasVV()) return;
+    const vv = window.visualViewport;
+    const topPx    = vv.height * 0.15 + vv.offsetTop;
+    const heightPx = vv.height * 0.70;
+    win.style.top = topPx + 'px';
+    win.style.height = heightPx + 'px';
+    win.style.left = '50%';
+    win.style.transform = 'translateX(-50%)';
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    scrollMessagesToBottom();
+  }
+  function fitMobileModal(){
+    if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
+    if (isKeyboardOpen()) applyKeyboardLayout(); else restoreToBaseline();
+  }
+
+  // Track keyboard state (mobile)
+  let kbOpen = false;
+  function setKbOpenState(nowOpen){
+    if (kbOpen === nowOpen) return;
+    kbOpen = nowOpen;
+    if (!kbOpen){
+      overlay.dataset.justClosedKeyboard = '1';
+      restoreToBaseline();
+      setTimeout(()=>{ delete overlay.dataset.justClosedKeyboard; }, 350);
+    }
+  }
+
+  // --- Modal open/close ---
+  function enterModal() {
+    win.style.display = 'flex';
+    launcher.style.display = 'none';
+    win.classList.add('kc-modal');
+    overlay.style.display = 'block';
+    freezePage();
+    // Only capture baseline for mobile
+    requestAnimationFrame(()=>{
+      if (isSmallScreen() && !isKeyboardOpen()) captureBaseline(true);
+      fitMobileModal();
+    });
+  }
+  function exitModal() {
+    win.classList.remove('kc-modal');
+    overlay.style.display = 'none';
+    unfreezePage();
+  }
+
+  // Open chat
+  launcher.addEventListener('click', () => {
+    ensureGreeting();
+    enterModal();
+    setAvatarVisible(false);
+  });
+
+  function closeChat() {
+    win.style.display = 'none';
+    launcher.style.display = 'inline-block';
+    exitModal();
+    setAvatarVisible(true);
+  }
+  closeBtn.addEventListener('click', closeChat);
+
+  overlay.addEventListener('click', (e) => {
+    if (isSmallScreen() && (kbOpen || overlay.dataset.justClosedKeyboard === '1')) {
+      e.preventDefault(); e.stopPropagation();
+      restoreToBaseline(); return;
+    }
+    closeChat();
+  });
+
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
+
+  // New chat
+  newBtn.addEventListener('click', async () => {
+    resetSessionId();
     updateSessionBadge();
+    msgs.innerHTML = "";
+    badges.innerHTML = "";
+    clearRole();
+    ensureGreeting();
+    enterModal();
+  });
 
-    // Avatar status tweak
-    setTimeout(() => {
-      document.getElementById('avatar-img').src = 'https://media.giphy.com/media/10dU7AN7xsi1I4/giphy.gif';
-      document.getElementById('avatar-text').textContent = "Kevin's assistant is online!";
-    }, 3000);
-    function setAvatarVisible(on) {
-      if (!avatarBox) return;
-      avatarBox.style.display = on ? 'flex' : 'none';
-    }
+  // Keep centered when clicking a bubble
+  document.getElementById('kc-messages').addEventListener('click', (e) => {
+    if (e.target.closest('.kc-bubble')) enterModal();
+  });
 
-    // --- Message helpers ---
-    function addMsg(role, text) {
-      const row = document.createElement('div');
-      row.className = `kc-msg ${role}`;
+  // IMPORTANT: Only do keyboard adjustments on MOBILE
+  input.addEventListener('focus', () => {
+    if (!isSmallScreen()) return;        // ← prevents desktop reflow/jump
+    enterModal();                        // ensure frozen state before keyboard
+    scrollMessagesToBottom();
+    if (hasVV()) applyKeyboardLayout();
+    window.scrollTo(0, pageScrollY);     // anchor layout viewport
+  });
 
-      if (role === 'bot') {
-        const avatar = document.createElement('div');
-        avatar.className = 'kc-avatar';
-        avatar.innerHTML = BOT_ICON;
-        avatar.title = 'Virtual Kevin';
-        row.appendChild(avatar);
-      }
+  input.addEventListener('blur', () => setTimeout(() => {
+    if (isSmallScreen() && !isKeyboardOpen()) restoreToBaseline();
+  }, 80));
 
-      const bubble = document.createElement('div');
-      bubble.className = 'kc-bubble';
+  // Typing indicator
+  let typingRow = null;
+  function showTyping() {
+    if (typingRow) return;
+    typingRow = document.createElement('div');
+    typingRow.className = 'kc-msg bot kc-typing-row';
+    const avatar = document.createElement('div'); avatar.className = 'kc-avatar'; avatar.innerHTML = BOT_ICON; avatar.title = 'Virtual Kevin';
+    const bubble = document.createElement('div'); bubble.className = 'kc-bubble';
+    bubble.innerHTML = `Kevin is typing <span class="kc-typing-dots"><span></span><span></span><span></span></span>`;
+    typingRow.appendChild(avatar); typingRow.appendChild(bubble);
+    msgs.appendChild(typingRow);
+    scrollMessagesToBottom();
+  }
+  function hideTyping(){ if(!typingRow) return; try{ msgs.removeChild(typingRow) }catch{} typingRow=null; }
 
-      if (role === 'bot') {
-        const html = DOMPurify.sanitize(marked.parse(text || ''));
-        bubble.innerHTML = html;
-      } else {
-        bubble.textContent = text;
-      }
+  // Send message
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addUser(text);
+    showTyping();
+    sendBtn.disabled = true;
 
-      row.appendChild(bubble);
-      msgs.appendChild(row);
-      msgs.scrollTop = msgs.scrollHeight;
-
-      if (role === 'bot' && window.hljs) {
-        row.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-      }
-    }
-    const addUser = (t) => addMsg('user', t);
-    const addBot  = (t) => addMsg('bot', t);
-
-    function hasAnyMessage() { return !!msgs.querySelector('.kc-msg'); }
-    function ensureGreeting() {
-      if (!hasAnyMessage()) addBot("Hello! I’m **Virtual Kevin**. Ask me about my portfolio, background, or projects.");
-    }
-
-    function showRole(role) {
-      if (!roleBadge) return;
-      if (!role) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; return; }
-      const label = role === 'recruiter_interviewer' ? 'Recruiter/Interviewer' : 'General';
-      roleBadge.textContent = `Role: ${label}`;
-      roleBadge.style.display = 'inline-block';
-    }
-    function clearRole() { if (!roleBadge) return; roleBadge.style.display = 'none'; roleBadge.textContent = ''; }
-    function showCompanies(companies) {
-      badges.innerHTML = '';
-      if (!companies || !companies.length) return;
-      companies.slice(0, 3).forEach(c => {
-        const tag = document.createElement('span');
-        tag.className = 'kc-badge';
-        tag.textContent = c.name;
-        badges.appendChild(tag);
+    try {
+      const payload = { session_id: getSessionId(), message: text, utm_source: "web" };
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-    }
 
-    function scrollMessagesToBottom(){ msgs.scrollTop = msgs.scrollHeight; }
+      const ctype = (res.headers.get('content-type') || '').toLowerCase();
+      hideTyping();
+      sendBtn.disabled = false;
 
-    // --- Freeze background (no page movement) ---
-    let pageScrollY = 0;
-    function freezePage() {
-      pageScrollY = window.scrollY || 0;
-      document.documentElement.classList.add('kc-freeze');
-      document.body.classList.add('kc-freeze');
-      document.body.style.top = `-${pageScrollY}px`;
-      // Scrollbar compensation on desktop only:
-      const sbw = window.innerWidth - document.documentElement.clientWidth;
-      if (sbw > 0) document.body.style.paddingRight = sbw + 'px';
-    }
-    function unfreezePage() {
-      document.documentElement.classList.remove('kc-freeze');
-      document.body.classList.remove('kc-freeze');
-      document.body.style.top = ''; document.body.style.paddingRight = '';
-      window.scrollTo(0, pageScrollY);
-    }
-
-    // --- Modal helpers ---
-    let baseline = null; // { topPx, heightPx }
-    function captureBaseline(force=false){
-      if (baseline && !force) return;
-      const cs = getComputedStyle(win);
-      baseline = { topPx: parseFloat(cs.top)||0, heightPx: parseFloat(cs.height)||0 };
-    }
-    function restoreToBaseline(){
-      if (!baseline){ resetInlineModalStyles(); return; }
-      win.style.top = baseline.topPx + 'px';
-      win.style.height = baseline.heightPx + 'px';
-      win.style.left = '50%';
-      win.style.transform = 'translateX(-50%)';
-      win.style.right = 'auto';
-      win.style.bottom = 'auto';
-      scrollMessagesToBottom();
-    }
-    function resetInlineModalStyles(){
-      win.style.removeProperty('top');
-      win.style.removeProperty('height');
-      win.style.removeProperty('left');
-      win.style.removeProperty('transform');
-      win.style.removeProperty('right');
-      win.style.removeProperty('bottom');
-    }
-
-    function isSmallScreen(){ return window.matchMedia('(max-width: 768px)').matches; }
-    function isKeyboardOpen(){
-      if (!window.visualViewport) return false;
-      const ratio = window.visualViewport.height / window.innerHeight;
-      return ratio < 0.92;
-    }
-    function applyKeyboardLayout(){
-      if (!isSmallScreen() || !win.classList.contains('kc-modal') || !window.visualViewport) return;
-      const vv = window.visualViewport;
-      const topPx    = vv.height * 0.15 + vv.offsetTop;
-      const heightPx = vv.height * 0.70;
-
-      win.style.top = topPx + 'px';
-      win.style.height = heightPx + 'px';
-      win.style.left = '50%';
-      win.style.transform = 'translateX(-50%)';
-      win.style.right = 'auto';
-      win.style.bottom = 'auto';
-      scrollMessagesToBottom();
-    }
-    function fitMobileModal(){
-      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
-      if (isKeyboardOpen()) applyKeyboardLayout(); else restoreToBaseline();
-    }
-
-    // Track keyboard state to guard overlay clicks
-    let kbOpen = false;
-    function setKbOpenState(nowOpen){
-      if (kbOpen === nowOpen) return;
-      kbOpen = nowOpen;
-      if (!kbOpen){
-        overlay.dataset.justClosedKeyboard = '1';
-        restoreToBaseline();
-        setTimeout(()=>{ delete overlay.dataset.justClosedKeyboard; }, 350);
+      if (ctype.includes('text/markdown')) {
+        const md = await res.text();
+        addBot(md);
+        return;
       }
+
+      const data = await res.json();
+      showRole(data.role);
+      showCompanies(data.companies);
+
+      if (data.answer) addBot(data.answer);
+      else if (data.error) addBot(`**Error:** ${data.error}`);
+      else addBot("_No response from server._");
+    } catch (err) {
+      hideTyping();
+      sendBtn.disabled = false;
+      addBot("**Network error.** Please try again.");
     }
+  }
 
-    function enterModal() {
-      win.style.display = 'flex';
-      launcher.style.display = 'none';
-      win.classList.add('kc-modal');
-      overlay.style.display = 'block';
-      freezePage();
-      requestAnimationFrame(()=>{
-        if (!isKeyboardOpen()) captureBaseline(true);
-        fitMobileModal();
-      });
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+  // ====== HEADER data-network animation (unchanged) ======
+  (() => {
+    const canvas = document.getElementById('ds-bg');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const BG_LINE = 'rgba(255,255,255,0.18)';
+    const BG_NODE = 'rgba(255,255,255,0.85)';
+    const ACCENT  = 'rgba(0,145,255,0.45)';
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      w = Math.max(1, Math.floor(rect.width));
+      h = Math.max(1, Math.floor(rect.height));
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    function exitModal() {
-      win.classList.remove('kc-modal');
-      overlay.style.display = 'none';
-      unfreezePage();
-    }
+    resize();
+    window.addEventListener('resize', resize);
 
-    // Open chat
-    launcher.addEventListener('click', () => {
-      ensureGreeting();
-      enterModal();
-      setAvatarVisible(false);
-    });
-
-    function closeChat() {
-      win.style.display = 'none';
-      launcher.style.display = 'inline-block';
-      exitModal();
-      setAvatarVisible(true);
-    }
-    closeBtn.addEventListener('click', closeChat);
-
-    overlay.addEventListener('click', (e) => {
-      if (isSmallScreen() && (kbOpen || overlay.dataset.justClosedKeyboard === '1')) {
-        e.preventDefault(); e.stopPropagation();
-        restoreToBaseline(); return;
-      }
-      closeChat();
-    });
-
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && win.style.display !== 'none') closeChat(); });
-
-    // New chat
-    newBtn.addEventListener('click', async () => {
-      resetSessionId();
-      updateSessionBadge();
-      msgs.innerHTML = "";
-      badges.innerHTML = "";
-      clearRole();
-      ensureGreeting();
-      enterModal();
-    });
-
-    // Clicking message keeps centered
-    document.getElementById('kc-messages').addEventListener('click', (e) => {
-      if (e.target.closest('.kc-bubble')) enterModal();
-    });
-
-    // IMPORTANT: Do NOT scroll the page on focus
-    input.addEventListener('focus', () => {
-      enterModal();                 // ensures frozen state before keyboard
-      scrollMessagesToBottom();     // only scroll the messages pane
-      if (window.visualViewport) applyKeyboardLayout();
-      // Keep the layout viewport anchored (no page jump)
-      window.scrollTo(0, pageScrollY);
-    });
-
-    // Typing indicator
-    let typingRow = null;
-    function showTyping() {
-      if (typingRow) return;
-      typingRow = document.createElement('div');
-      typingRow.className = 'kc-msg bot kc-typing-row';
-      const avatar = document.createElement('div'); avatar.className = 'kc-avatar'; avatar.innerHTML = BOT_ICON; avatar.title = 'Virtual Kevin';
-      const bubble = document.createElement('div'); bubble.className = 'kc-bubble';
-      bubble.innerHTML = `Kevin is typing <span class="kc-typing-dots"><span></span><span></span><span></span></span>`;
-      typingRow.appendChild(avatar); typingRow.appendChild(bubble);
-      msgs.appendChild(typingRow);
-      scrollMessagesToBottom();
-    }
-    function hideTyping(){ if(!typingRow) return; try{ msgs.removeChild(typingRow) }catch{} typingRow=null; }
-
-    // Send message
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
-      addUser(text);
-      showTyping();
-      sendBtn.disabled = true;
-
-      try {
-        const payload = { session_id: getSessionId(), message: text, utm_source: "web" };
-        const res = await fetch(`${API_BASE}/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+    const nodes = [];
+    const mouse = { x: null, y: null, active: false };
+    const MAX_COUNT = () => Math.max(18, Math.min(Math.round((w*h)/18000), 80));
+    function spawnNodes(n) {
+      for (let i = 0; i < n; i++) {
+        nodes.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          r: 1.2 + Math.random() * 1.8
         });
+      }
+    }
+    spawnNodes(MAX_COUNT());
 
-        const ctype = (res.headers.get('content-type') || '').toLowerCase();
-        hideTyping();
-        sendBtn.disabled = false;
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = (e.clientX - rect.left);
+      mouse.y = (e.clientY - rect.top);
+      mouse.active = true;
+    });
+    canvas.addEventListener('mouseleave', () => { mouse.active = false; });
 
-        if (ctype.includes('text/markdown')) {
-          const md = await res.text();
-          addBot(md);
-          return;
+    function connectThreshold() { return Math.max(48, Math.min(140, Math.sqrt(w*h) / 14)); }
+    const FRICTION = 0.998;
+
+    let rafId = null;
+    function drawFrame() {
+      const want = MAX_COUNT();
+      if (want > nodes.length) spawnNodes(want - nodes.length);
+      if (want < nodes.length) nodes.splice(want, nodes.length - want);
+
+      ctx.clearRect(0, 0, w, h);
+
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (mouse.active) {
+          const dx = n.x - mouse.x, dy = n.y - mouse.y;
+          const dist2 = dx*dx + dy*dy, rad = 80;
+          if (dist2 < rad*rad) {
+            const dist = Math.sqrt(dist2) || 0.001;
+            const force = (rad - dist) / rad * 0.015;
+            n.vx += (dx / dist) * force;
+            n.vy += (dy / dist) * force;
+          }
         }
+        n.x += n.vx; n.y += n.vy;
+        n.vx *= FRICTION; n.vy *= FRICTION;
+        if (n.x < 0 || n.x > w) n.vx *= -1, n.x = Math.max(0, Math.min(w, n.x));
+        if (n.y < 0 || n.y > h) n.vy *= -1, n.y = Math.max(0, Math.min(h, n.y));
+      }
 
-        const data = await res.json();
-        showRole(data.role);
-        showCompanies(data.companies);
+      const thresh = connectThreshold();
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i], b = nodes[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d2 = dx*dx + dy*dy;
+          if (d2 > thresh*thresh) continue;
+          const d = Math.sqrt(d2) || 1;
+          const t = 1 - (d / thresh);
+          ctx.strokeStyle = t > 0.75 ? ACCENT : BG_LINE;
+          ctx.lineWidth = 1 * (0.4 + 0.6 * t);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
 
-        if (data.answer) addBot(data.answer);
-        else if (data.error) addBot(`**Error:** ${data.error}`);
-        else addBot("_No response from server._");
-      } catch (err) {
-        hideTyping();
-        sendBtn.disabled = false;
-        addBot("**Network error.** Please try again.");
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        ctx.fillStyle = BG_NODE;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+    function tick() {
+      if (reduceMotion) { drawFrame(); return; }
+      drawFrame();
+      rafId = requestAnimationFrame(tick);
+    }
+    tick();
+    window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
+  })();
 
-    // ====== HEADER data-network animation (unchanged) ======
-    (() => {
-      const canvas = document.getElementById('ds-bg');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const BG_LINE = 'rgba(255,255,255,0.18)';
-      const BG_NODE = 'rgba(255,255,255,0.85)';
-      const ACCENT  = 'rgba(0,145,255,0.45)';
-      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
-      function resize() {
-        const rect = canvas.getBoundingClientRect();
-        w = Math.max(1, Math.floor(rect.width));
-        h = Math.max(1, Math.floor(rect.height));
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = Math.floor(w * dpr);
-        canvas.height = Math.floor(h * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // ====== VisualViewport wiring (MOBILE ONLY) ======
+  let vvDebounce;
+  function onVV(){
+    if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
+    clearTimeout(vvDebounce);
+    vvDebounce = setTimeout(() => {
+      const now = isKeyboardOpen();
+      setKbOpenState(now);
+      if (document.body.style.position === 'fixed') {
+        window.scrollTo(0, pageScrollY);
       }
-      resize();
-      window.addEventListener('resize', resize);
+      if (now) applyKeyboardLayout(); else restoreToBaseline();
+    }, 50);
+  }
+  if (hasVV()) {
+    window.visualViewport.addEventListener('resize', onVV);
+    window.visualViewport.addEventListener('scroll', onVV);
+  }
+  window.addEventListener('orientationchange', () => setTimeout(() => {
+    if (isSmallScreen()) restoreToBaseline();
+  }, 250));
+  window.addEventListener('resize', () => {
+    if (isSmallScreen() && !isKeyboardOpen()) restoreToBaseline();
+  });
 
-      const nodes = [];
-      const mouse = { x: null, y: null, active: false };
-      const MAX_COUNT = () => Math.max(18, Math.min(Math.round((w*h)/18000), 80));
-      function spawnNodes(n) {
-        for (let i = 0; i < n; i++) {
-          nodes.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: (Math.random() - 0.5) * 0.5,
-            r: 1.2 + Math.random() * 1.8
-          });
-        }
-      }
-      spawnNodes(MAX_COUNT());
+  // When closing from anywhere, only restore on mobile
+  const _origCloseChat_wrap = closeChat;
+  window.closeChat = function() { if (isSmallScreen()) restoreToBaseline(); _origCloseChat_wrap(); };
 
-      canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = (e.clientX - rect.left);
-        mouse.y = (e.clientY - rect.top);
-        mouse.active = true;
-      });
-      canvas.addEventListener('mouseleave', () => { mouse.active = false; });
+  /* ========= Auto-close on inactivity (overlay + countdown) ========= */
+  const INACTIVITY_MS = 5 * 60 * 1000;   // 5 minutes
+  const AUTO_CLOSE_COUNTDOWN_MS = 3000;  // 3 seconds
 
-      function connectThreshold() { return Math.max(48, Math.min(140, Math.sqrt(w*h) / 14)); }
-      const FRICTION = 0.998;
-
-      let rafId = null;
-      function drawFrame() {
-        const want = MAX_COUNT();
-        if (want > nodes.length) spawnNodes(want - nodes.length);
-        if (want < nodes.length) nodes.splice(want, nodes.length - want);
-
-        ctx.clearRect(0, 0, w, h);
-
-        for (let i = 0; i < nodes.length; i++) {
-          const n = nodes[i];
-          if (mouse.active) {
-            const dx = n.x - mouse.x, dy = n.y - mouse.y;
-            const dist2 = dx*dx + dy*dy, rad = 80;
-            if (dist2 < rad*rad) {
-              const dist = Math.sqrt(dist2) || 0.001;
-              const force = (rad - dist) / rad * 0.015;
-              n.vx += (dx / dist) * force;
-              n.vy += (dy / dist) * force;
-            }
-          }
-          n.x += n.vx; n.y += n.vy;
-          n.vx *= FRICTION; n.vy *= FRICTION;
-          if (n.x < 0 || n.x > w) n.vx *= -1, n.x = Math.max(0, Math.min(w, n.x));
-          if (n.y < 0 || n.y > h) n.vy *= -1, n.y = Math.max(0, Math.min(h, n.y));
-        }
-
-        const thresh = connectThreshold();
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i], b = nodes[j];
-            const dx = a.x - b.x, dy = a.y - b.y;
-            const d2 = dx*dx + dy*dy;
-            if (d2 > thresh*thresh) continue;
-            const d = Math.sqrt(d2) || 1;
-            const t = 1 - (d / thresh);
-            ctx.strokeStyle = t > 0.75 ? ACCENT : BG_LINE;
-            ctx.lineWidth = 1 * (0.4 + 0.6 * t);
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-          }
-        }
-
-        for (let i = 0; i < nodes.length; i++) {
-          const n = nodes[i];
-          ctx.fillStyle = BG_NODE;
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
-      function tick() {
-        if (reduceMotion) { drawFrame(); return; }
-        drawFrame();
-        rafId = requestAnimationFrame(tick);
-      }
-      tick();
-      window.addEventListener('beforeunload', () => { if (rafId) cancelAnimationFrame(rafId); });
+  (function () {
+    // Inject overlay CSS once
+    (function injectStylesOnce() {
+      if (document.getElementById('kc-autoclose-styles')) return;
+      const css = `
+#kc-autoclose{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,27,78,0.55);backdrop-filter:blur(2px);z-index:9999}
+.kc-ac-card{width:min(90%,320px);background:#fff;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,0.18);padding:20px 18px;text-align:center}
+.kc-ac-icon{width:42px;height:42px;margin:0 auto 10px;border-radius:9999px;background:#eef3ff;display:flex;align-items:center;justify-content:center}
+.kc-ac-title{font-weight:700;color:#031B4E;margin-bottom:4px}
+.kc-ac-sub{font-size:.92rem;color:#4a5b7a;margin-bottom:12px}
+.kc-ac-count{font-size:28px;font-weight:800;margin-bottom:12px}
+.kc-ac-progress{height:6px;background:#e8eef7;border-radius:9999px;overflow:hidden}
+.kc-ac-progress>span{display:block;height:100%;background:#0061EB;width:100%}
+@keyframes kcShrink{from{width:100%}to{width:0%}}`;
+      const style = document.createElement('style');
+      style.id = 'kc-autoclose-styles';
+      style.textContent = css;
+      document.head.appendChild(style);
     })();
 
-    // ====== VisualViewport wiring (keep page anchored while frozen) ======
-    let vvDebounce;
-    function onVV(){
-      if (!isSmallScreen() || !win.classList.contains('kc-modal')) return;
-      clearTimeout(vvDebounce);
-      vvDebounce = setTimeout(() => {
-        const now = isKeyboardOpen();
-        setKbOpenState(now);
-        if (document.body.classList.contains('kc-freeze')) {
-          // Re-anchor the layout viewport to the original scroll position.
-          window.scrollTo(0, pageScrollY);
+    let _inactivityTimer = null;
+    let _closeCountdownTimer = null;
+    let _closeHardTimer = null;
+
+    function ensureAutoCloseOverlay() {
+      let ac = document.getElementById('kc-autoclose');
+      if (ac) return ac;
+      ac = document.createElement('div');
+      ac.id = 'kc-autoclose';
+      ac.innerHTML = `
+        <div class="kc-ac-card" role="alert" aria-live="assertive">
+          <div class="kc-ac-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                 stroke="#0061EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v10" />
+              <path d="M5 13a7 7 0 1 0 14 0" />
+            </svg>
+          </div>
+          <div class="kc-ac-title">Closing chat…</div>
+          <div class="kc-ac-sub">Refreshing your session for next time</div>
+          <div class="kc-ac-count" id="kc-ac-count">3</div>
+          <div class="kc-ac-progress"><span id="kc-ac-bar"></span></div>
+        </div>`;
+      win.appendChild(ac);
+      ac.addEventListener('click', e => e.stopPropagation());
+      return ac;
+    }
+
+    function showAutoCloseOverlay(ms = AUTO_CLOSE_COUNTDOWN_MS) {
+      const ac = ensureAutoCloseOverlay();
+      ac.style.display = 'flex';
+      const countEl = ac.querySelector('#kc-ac-count');
+      const barEl   = ac.querySelector('#kc-ac-bar');
+      if (barEl) barEl.style.animation = `kcShrink ${ms}ms linear forwards`;
+      let remaining = Math.ceil(ms / 1000);
+      if (countEl) countEl.textContent = remaining;
+      clearInterval(_closeCountdownTimer);
+      _closeCountdownTimer = setInterval(() => {
+        remaining -= 1;
+        if (countEl) countEl.textContent = Math.max(0, remaining);
+        if (remaining <= 0) {
+          clearInterval(_closeCountdownTimer);
+          _closeCountdownTimer = null;
         }
-        if (now) applyKeyboardLayout(); else restoreToBaseline();
-      }, 50);
+      }, 1000);
     }
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', onVV);
-      window.visualViewport.addEventListener('scroll', onVV);
+
+    function hideAutoCloseOverlay() {
+      const ac = document.getElementById('kc-autoclose');
+      if (!ac) return;
+      ac.style.display = 'none';
+      const bar = ac.querySelector('#kc-ac-bar');
+      if (bar) bar.style.animation = '';
+      const countEl = ac.querySelector('#kc-ac-count');
+      if (countEl) countEl.textContent = '';
+      if (_closeCountdownTimer) { clearInterval(_closeCountdownTimer); _closeCountdownTimer = null; }
     }
-    window.addEventListener('orientationchange', () => setTimeout(() => { restoreToBaseline(); }, 250));
-    window.addEventListener('resize', () => { if (!isKeyboardOpen()) restoreToBaseline(); });
 
-    // When closing from anywhere, restore baseline & background
-    const _origCloseChat = closeChat;
-    window.closeChat = function() { restoreToBaseline(); _origCloseChat(); };
+    function clearInactivityTimer() {
+      if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
+    }
+    function startInactivityTimer() {
+      clearInactivityTimer();
+      _inactivityTimer = setTimeout(beginAutoClose, INACTIVITY_MS);
+    }
+    function bumpInactivity() {
+      if (win.classList.contains('kc-modal')) startInactivityTimer();
+    }
 
-    input.addEventListener('blur', () => setTimeout(() => {
-      if (!isKeyboardOpen()) restoreToBaseline();
-    }, 80));
-  </script>
+    function performAutoClose() {
+    // 1) Refresh session id so next chat is brand-new
+    try { resetSessionId(); updateSessionBadge(); } catch {}
+
+    // 2) Wipe ALL chat UI
+    try { hideTyping(); } catch {}
+    try { input.value = ''; } catch {}
+    try { msgs.innerHTML = ''; } catch {}
+    try { badges.innerHTML = ''; } catch {}
+
+    // role badge (belt & suspenders in case clearRole isn't defined)
+    try { clearRole(); } catch {}
+    if (roleBadge) { roleBadge.style.display = 'none'; roleBadge.textContent = ''; }
+
+    // 3) Hide the auto-close overlay
+    try { hideAutoCloseOverlay(); } catch {}
+
+    // 4) Close the chat (restores page + baseline via your wrapped closeChat)
+    if (typeof window.closeChat === 'function') window.closeChat();
+    else {
+      // minimal fallback
+      win.style.display = 'none';
+      launcher.style.display = 'inline-block';
+      overlay.style.display = 'none';
+    }
+
+    // 5) Cleanup timers
+    try { clearTimeout(_inactivityTimer); _inactivityTimer = null; } catch {}
+    try { clearTimeout(_closeHardTimer);  _closeHardTimer  = null; } catch {}
+
+    // 6) Ensure next open shows the greeting
+    // (your launcher click already calls ensureGreeting; wiping msgs is enough)
+  }
+    function beginAutoClose() {
+      showAutoCloseOverlay(AUTO_CLOSE_COUNTDOWN_MS);
+      clearTimeout(_closeHardTimer);
+      _closeHardTimer = setTimeout(performAutoClose, AUTO_CLOSE_COUNTDOWN_MS);
+    }
+
+    // Hook enter/close to start/stop timers
+    const _origEnterModal = typeof window.enterModal === 'function' ? window.enterModal : null;
+    const _origCloseChat  = typeof window.closeChat  === 'function' ? window.closeChat  : null;
+
+    if (_origEnterModal) {
+      window.enterModal = function () {
+        _origEnterModal();
+        startInactivityTimer();
+      };
+    }
+
+    if (_origCloseChat) {
+      window.closeChat = function () {
+        clearInactivityTimer();
+        hideAutoCloseOverlay();
+        _origCloseChat();
+      };
+    }
+
+    // Count as activity
+    win.addEventListener('pointerdown', bumpInactivity);
+    win.addEventListener('keydown',  bumpInactivity, true);
+    msgs.addEventListener('scroll',  bumpInactivity);
+    input.addEventListener('input',  bumpInactivity);
+    sendBtn.addEventListener('click', bumpInactivity);
+
+    // Also bump when a message is added
+    if (typeof addMsg === 'function') {
+      const _origAddMsg = addMsg;
+      window.addMsg = addMsg = function(role, text) {
+        _origAddMsg(role, text);
+        bumpInactivity();
+      };
+    }
+
+    // If chat already open on load
+    if (win.classList.contains('kc-modal') && getComputedStyle(win).display !== 'none') {
+      startInactivityTimer();
+    }
+  })();
+</script>
 </body>
 </html>
-
 
 
